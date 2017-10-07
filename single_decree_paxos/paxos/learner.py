@@ -1,4 +1,4 @@
-import sys
+import threading
 
 
 class Learner:
@@ -6,19 +6,27 @@ class Learner:
     Learner finds out when a propal has been accepted by a majority
     of acceptors
     """
+
     def __init__(self, majority):
         self.acceptance_count = {}
         self.majority = majority
+        self.value_accepted = False
+        self.lock = threading.RLock()
 
     def inform(self, proposal):
+        if self.concensus_achieved():
+            return
+
         if proposal in self.acceptance_count:
             self.acceptance_count[proposal] += 1
+            if self.acceptance_count[proposal] >= self.majority:
+                with self.lock:
+                    self.value_accepted = True
+                print("Proposal Accepted")
+                print(proposal)
         else:
             self.acceptance_count[proposal] = 1
 
-        # check whether any proposal has been accepted by a majority
-        for k, v in self.acceptance_count.items():
-            if v >= self.majority:
-                print("Proposal Accepted")
-                print(k)
-                sys.exit()
+    def concensus_achieved(self):
+        with self.lock:
+            return self.value_accepted
