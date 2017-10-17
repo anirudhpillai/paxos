@@ -14,6 +14,11 @@ class Learner:
         self.lock = threading.RLock()
 
     def inform(self, proposal):
+        """
+        An Acceptor informs the learner that it has accepted a value.
+        The Learner then checks if a majority of Acceptors
+        have agreed on a value.
+        """
         if self.concensus_achieved():
             return
 
