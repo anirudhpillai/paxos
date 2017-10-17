@@ -3,8 +3,9 @@ from paxos.proposer import Proposer
 from paxos.learner import Learner
 
 
+# TODO: Need to improve simulation to accomodate more proposers and acceptors.
 majority = 3
-no_of_proposers = 2
+no_of_proposers = 3
 
 learner = Learner(majority)
 acceptors = [Acceptor(learner) for _ in range(majority * 2 - 1)]
