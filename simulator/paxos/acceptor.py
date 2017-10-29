@@ -19,12 +19,8 @@ class Acceptor:
         to ignore proposals with proposal.number <= self.promised_number.
         """
         with self.lock:
-            if not self.accepted_proposal:
-                # promise not to accept proposals < proposal.number
-                self.promised_number = proposal.number
-                return proposal
-
             if proposal.number > self.promised_number:
+                # promise not to accept proposals < proposal.number
                 self.promised_number = proposal.number
 
                 if self.accepted_proposal:
