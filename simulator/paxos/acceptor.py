@@ -1,5 +1,5 @@
-from process import Process
-from message import AcceptRequestMessage, PrepareRequestMessage, \
+from .process import Process
+from .message import AcceptRequestMessage, PrepareRequestMessage, \
     PromiseResponseMessage, NackResponseMessage
 
 
