@@ -1,43 +1,47 @@
-import threading
+from process import Process
+from message import AcceptRequestMessage, PrepareRequestMessage, \
+    PromiseResponseMessage, NackResponseMessage
 
 
-class Acceptor:
-    """
-    Acceptor stores the highest proposal number that it has promised.
-    """
+class Acceptor(Process):
+    def __init__(self, env, id):
+        Process.__init__(self, env, id)
+        self.state = ("AInit",)
+        self.env = env
+        self.env.add_proc(self)
+        self.id = id
 
-    def __init__(self, learner):
-        self.accepted_proposal = None
-        self.promised_number = 0
-        self.learner = learner
-        self.lock = threading.RLock()
+    def send_promise_resp(self, to):
+        p_no, p_val = self.state[1]
+        self.send_msg(to, PromiseResponseMessage(self.id, (p_no, p_val)))
 
-    def prepare(self, proposal):
-        """
-        Asks the Acceptor to prepare a proposal.
-        The Acceptor ignores the proposal if it has already made a promised
-        to ignore proposals with proposal.number <= self.promised_number.
-        """
-        with self.lock:
-            if proposal.number > self.promised_number:
-                # promise not to accept proposals < proposal.number
-                self.promised_number = proposal.number
+    def send_nack_resp(self, to):
+        self.send_msg(to, NackResponseMessage(self.id))
 
-                if self.accepted_proposal:
-                    return self.accepted_proposal
+    def body(self):
+        while True:
+            msg = self.get_next_msg()
+            print("msg", msg)
+            p_no, p_val = msg.proposal
+
+            if isinstance(msg, PrepareRequestMessage):
+                print(self.state[0])
+                if self.state[0] == "AInit":
+                    self.state = ("APromised", msg.proposal)
+                    self.send_promise_resp(p_no)
+                elif self.state[0] == "APromised":
+                    promised_no, _ = self.state[1]
+                    if p_val < promised_no:
+                        self.send_nack_resp(p_no)
+                    else:
+                        self.state = ("APromised", msg.proposal)
+                        self.send_promise_resp(p_no)
                 else:
-                    return proposal
-
-    def accept(self, proposal):
-        """
-        The Acceptor receives an accept request and only accepts the
-        proposal if it hasn't already promised to ignore proposals with
-        proposal.number less than self.promised_number where
-        self.promised_number > proposal.number
-        """
-        with self.lock:
-            if proposal.number >= self.promised_number:
-                self.accepted_proposal = proposal
-                # inform learner that it has accepted a proposal
-                self.learner.inform(self.accepted_proposal)
-                return proposal
+                    self.send_nack_resp(p_no)
+            elif isinstance(msg, AcceptRequestMessage):
+                if self.state[0] == "AInit":
+                    self.state = ("AAccepted", msg.proposal)
+                else:
+                    promised_no, _ = self.state[1]
+                    if p_val >= promised_no:
+                        self.state = ("AAccepted", msg.proposal)

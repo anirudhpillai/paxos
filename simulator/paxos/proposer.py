@@ -1,84 +1,64 @@
-from .proposal import Proposal
-from binascii import hexlify
-
-import os
-import random
-import time
-import threading
+from process import Process
+from message import AcceptRequestMessage, PrepareRequestMessage, \
+    PromiseResponseMessage, NackResponseMessage
 
 
-class Proposer:
-    """
-    Proposer proposes a value to a majority of Acceptors
-    """
-
-    def __init__(self, acceptors):
+class Proposer(Process):
+    def __init__(self, env, acceptors, p_no, p_val):
+        Process.__init__(self, env, p_no)
+        self.state = ("PInit", p_no, p_val)
         self.acceptors = acceptors
-        self.majority = len(self.acceptors) // 2 + 1
-        self.proposal_number = 0
-        self.proposal_value = hexlify(os.urandom(3)).decode()
-        self.proposal = Proposal(self.proposal_number, self.proposal_value)
+        self.env = env
+        self.env.add_proc(self)
 
-        print("Proposer: ", self.proposal_value)
+    def send_prepare_req(self):
+        _, p_no, p_val = self.state
+        for acceptor in self.acceptors:
+            self.send_msg(
+                acceptor,
+                PrepareRequestMessage(p_no, (p_no, p_val))
+            )
 
-    def propose(self):
-        """
-        The proposer tries to propose the value in an asynchronous way.
-        It call the prepare method in a new thread
-        """
-        proposal_thread = threading.Thread(target=self.prepare)
-        proposal_thread.start()
+    def send_accept_req(self):
+        _, p_no, p_val = self.state
+        for acceptor in self.acceptors:
+            print("Sending msg")
+            self.send_msg(
+                acceptor,
+                AcceptRequestMessage(p_no, (p_no, p_val))
+            )
 
-    def prepare(self):
-        """
-        The proposer randomly selects a majority of Acceptors and sends them
-        a prepare request with the proposal_number and proposal_value.
-        If it receives a majority response then it sends out the accept_request
-        """
-        # Increase proposal number
-        self.proposal.increment()
+    def body(self):
+        _, p_no, p_val = self.state
 
-        majority_set = self._select_majority()
-        # majority_set = self.acceptors
+        self.send_prepare_req()
+        self.state = ("PWaitPrepResp", [], p_no, p_val)
 
-        responses = []
+        while True:
+            msg = self.get_next_msg()
+            print("msg", msg)
+            if isinstance(msg, PromiseResponseMessage):
+                print("Recv Promise")
+                if self.state[0] == "PWaitPrepResp":
+                    src = msg.src
+                    recv_p_no, recv_p_val = msg.proposal
+                    recv_promises = self.state[1]
 
-        for acceptor in majority_set:
-            resp = acceptor.prepare(self.proposal)
-            # simulate delay in receiving request
-            time.sleep(random.choice(range(20)) / 10)
-            if resp:  # if acceptor didn't ignore prepare request
-                responses.append(resp)
-
-        if len(responses) < self.majority:
-            return  # Majority of responses not received
-
-        # chooses proposal with highest proposal number
-        prepared_proposal = max(responses)
-        selected_proposal = Proposal(
-            self.proposal.number, prepared_proposal.value
-        )
-        self.proposal = selected_proposal
-        self.send_accept_request()
-
-    def send_accept_request(self):
-        """
-        Once proposer receives promises from a majority of acceptors,
-        it sends out an accept request to another majority of receivers
-        """
-        majority_set = self._select_majority()
-
-        for acceptor in majority_set:
-            acceptor.accept(self.proposal)
-
-    def _select_majority(self):
-        """
-        Randomly selects a majority of acceptors
-        """
-        # randomly select majority of acceptors
-        majority_set = random.sample(
-            self.acceptors,
-            random.choice(range(self.majority, len(self.acceptors)))
-        )
-
-        return majority_set
+                    if src not in map(lambda x: x[0], recv_promises):
+                        recv_promises.append((src, recv_p_no, recv_p_val))
+                        if sorted(map(lambda x: x[0], recv_promises)) == sorted(self.acceptors):
+                            recv_promises.sort(key=lambda x: x[1])
+                            highest_numbered_value = recv_promises[0][2]
+                            self.state = (
+                                "PSentAccReq", p_no, highest_numbered_value
+                            )
+                            self.send_accept_req()
+                            print("Exiting proposer", p_no)
+                            break
+                        else:
+                            self.state = (
+                                "PWaitPrepResp", recv_promises, p_no, p_val
+                            )
+            elif isinstance(msg, NackResponseMessage):
+                print("Exiting proposer", p_no)
+                break
