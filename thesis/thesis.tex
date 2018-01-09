@@ -1,46 +1,50 @@
-\documentclass[12pt]{report}
-\usepackage[utf8]{inputenc}
-\usepackage{graphicx}
-\graphicspath{ {images/} }
-
-\title{
-	{Mechanised Verification of Paxos-like Consensus Protocols}\\
-	{\large UCL}\\
-	% {\includegraphics{university.png}}
-}
-\author{Anirudh Pillai}
-\date{08-01-2018}
-
+\documentclass{thesis}
 
 \begin{document}
 
+
+\title{Mechanised Verification of Paxos-like Consensus Protocols}
+\author{Anirudh Pillai}
+
+\advisor{Dr. Ilya Sergey}
+
 \maketitle
-
-
-\chapter*{Abstract}
-Abstract goes here
-
-\chapter*{Dedication}
-To mum and dad
-
-\chapter*{Declaration}
-I declare that..
-
-\chapter*{Acknowledgements}
-I want to thank...
-
+\abstractpage
+\dedicationpage
+\acknowledgments
 \tableofcontents
 
+\setstretch{\dnormalspacing}
+% \abstractpage
+% \tableofcontents
+% %\authorlist
+% \listoffigures
+% \dedicationpage
+% \acknowledgments
 
-\chapter{Introduction}
-\input{chapters/introduction}
+% \doublespacing
 
-\chapter{Conclusion}
-\input{chapters/conclusion}
+% include each chapter...
+\setcounter{chapter}{-1}  % start chapter numbering at 0
+\include{chapters/introduction}
+\include{chapters/chapter1}
+\include{chapters/chapter2}
+\include{chapters/conclusion}
 
-\appendix
-\chapter{Appendix}
-\input{appendix/appendix}
+\setstretch{\dnormalspacing}
 
+%%
+\begin{appendices}
+    \include{chapters/appendixA}
+\end{appendices}
+\clearpage
+\bibliography{references}
+\addcontentsline{toc}{chapter}{References}
+\bibliographystyle{apalike2}
+
+% \clearpage
+% \bibliography{references}
+% \addcontentsline{toc}{chapter}{References}
+% \bibliographystyle{apalike2}
 
 \end{document}
