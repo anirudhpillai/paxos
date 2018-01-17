@@ -1,10 +1,130 @@
-\chapter{Context}
+\chapter{Background}
+This chapter lays down all the previous research which the project builds on. Before
+going over the design decisions on the project we first need to understand this
+background information and look at related work to see different approaches used
+to solve the problem.
 
 \newpage
 
+\section{Distributed Systems}
+%% TODO: Find nice intro
+
+A distributed system is a model in which processes running on running different
+computers, which are connected together in a network, exchange messages to coordinate
+their action, often resulting in the user thinking of the entire system as one single
+unified computer.
+
+A computer in the distibuted system is also alternatively referred to as a
+processor or a node in the system. Each node in a distributed systems has its
+own memory.
+
+%% TODO: Structured in terms of client and servers
+
+We will now go over a few concepts of distributed systems which will help us understand
+the characteristics of the protocols that run on these systems. This will lay down the
+groundwork for us to understand the Paxos protocol on which this project is based.
+
+\subsubsection{Asynchronous Environment}
+An asynchronous distributed system is one where there are no guarantees about the
+timing and order in which events occur.
+
+The clocks of each of the process in the system can be out of sync and may not be
+accurate. Therefore, there can be no guarantees about the order in which events occur.
+
+Further, messages sent by one process to another can be delayed for an arbitary period of time.
+
+A protocol running in an asynchronous enviroment has to account for these conditions
+in its design and try to achieve its goal without the guarantees of timed events.
+An asynchronous environment is very common for a real world distributed system but
+it also makes reasoning about the system harder because of the aforementioned properties.
+
+\subsubsection{Faults Tolerance}
+A fault tolerant distributed system is one which can continue to function correctly
+despite the failure of some of its components. A 'failure' of a node or 'fault' in a node
+means any unexpected behaviour from that node eg. not responding to messages, sending
+corrupted messages.
+
+Fault tolerance is one of the main reasons for using a distributed system as it
+increases the chances of your application continuing to functioning correctly and
+makes it more dependable. As Netflix mention on their blog
+'Fault Tolerance is a Requirement, Not a Feature'.
+%% TODO: Reference https://medium.com/netflix-techblog/fault-tolerance-in-a-high-volume-distributed-system-91ab4faae74a
+With their Netflix API receiving more than 1 billion requests a day, they expect
+that it is guaranteed that some of the components of their distributed system will fail.
+Using a fault tolerant distributed system they are able to ensure that a small failure
+in some components doesn't hinder the performance of the overall system, hence,
+enabling them to achieve their uptime metrics.
+
+Fault tolerant distributed system protocols are protocols which achieve their
+goals despite the failure of some of the components of the distributed system they run on.
+The protocol accounts for the failures and generally specifies the maximum number of
+failures and the types of failures it can handle before it stops functioning correctly.
+
+\subsubsection{State Machine Replication}
+%% TODO: Reference https://www.cs.cornell.edu/fbs/publications/SMSurvey.pdf
+
+In a client server model, the easiest way to implement it is to use one single server
+which handles all the client request. Obviously this isn't the most robust solution
+as if the single server fails, so does your service. To overcome the problem you
+use a collection of servers each of which is a replica of the original single server and
+ensure that each of these 'replicas' fails independantly, without effecting the other replicas.
+This adds more fault tolerance.
+
+State Machine Replication is method for creating a fault tolerant distributed system
+by replicating servers and using protocols to coordinate the interactions of these
+replicated servers with the client.
+
+A State Machine $M$ can be defined as $M = \lbrace q_0, Q, I, O, \delta, \gamma \rbrace$ where \\
+$q_0$ is the starting state \\
+$Q$ is the set of all possible states.
+$I$ is set of all valid inputs
+$O$ is the set of all valide outputs
+$\delta$ is the state transition function, $\delta : I x Q -> Q$
+$\gamma$ is the output function, $\gamma : I x Q -> O$
+
+%% TODO: Complete State Machine Replication Information
+
+The method of modelling a distributed system protocol as state transition system
+is very common and is a critical component of this project as well.
+
+%% TODO: Cover Byzantine Faults
+
+\subsubsection{Consensus Protocols}
+For handling faults in your distributed system you need to have replication.
+This leads to the problem of making all these replicas agree with each other
+to keep them consistent. Consensus protocols try to solve this problem.
+
+Consensus protocols are the family of distibuted systems protocols which aim to
+make a distributed network of processes agree on one result.
+
+These protocols are of interest because of their numerous real world applications.
+Let us take the example of a distributed database, which is a critical part of almost
+all large scale real world applications. This distributed database will run
+over a network of computers and everytime you use the database you aren't guaranteed
+to be served by the same computer.
+
+Suppose you add a file to the database. This action is performed by the processor that
+was serving you 'add' request. Later when you want to retrieve the file from the database
+you might be served by a different computer that did not perform the 'add' request. Inorder
+for the new computer to know that the file exists in the database, you will need to use a
+consensus protocol which helps all the computers in the network (which handle user
+requests) agree upon the result that the file has been added to the database.
+
+Popular consensus protocols include PageRank used by Google and the Blockchain
+consensus protocol. George and Ilya verified a subset of the protocol in Coq in
+their Toychain paper.
+%% TODO: references
+
 
 \section{Paxos}
+Having understood the the main concepts behind distributed system protocols, we can
+now finally get to the protocol at the heart of this project. Paxos is a family of
+asynchronous, fault tolerant, consensus protocol which achieves consensus in a network
+of unrealiable processes as long as a majority of them don't fail.
 
-\section{Coq}
+Paxos is used for state machine replication and helps all the replicas achieve
+consensus on a result.
 
 \section{Disel}
+
+\section{Related Work}
