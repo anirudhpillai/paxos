@@ -2,9 +2,7 @@
 \ProvidesClass{thesis}[2018/01/09 v2.0 Thesis Class]
 \LoadClass[12pt, oneside, letterpaper]{book}
 
-%
-% Options
-%
+
 \RequirePackage{etoolbox}
 
 % Line spacing: dsingle/ddouble
@@ -68,15 +66,15 @@
 \RequirePackage{url}
 \RequirePackage{amssymb}
 \RequirePackage{mathspec}
-% \setmathsfont(Digits,Latin,Greek)[Numbers={Proportional}]{EB Garamond}
-% \setmathrm{EB Garamond}
+\setmathsfont(Digits,Latin,Greek)[Numbers={Proportional}]{EB Garamond}
+\setmathrm{EB Garamond}
 \AtBeginEnvironment{tabular}{\addfontfeature{RawFeature=+tnum}}
 \widowpenalty=300
 \clubpenalty=300
-% \setromanfont[Numbers=OldStyle, Ligatures={Common, TeX}, Scale=1.0]{EB Garamond}
-% \newfontfamily{\smallcaps}[RawFeature={+c2sc,+scmp}]{EB Garamond}
+\setromanfont[Numbers=OldStyle, Ligatures={Common, TeX}, Scale=1.0]{EB Garamond}
+\newfontfamily{\smallcaps}[RawFeature={+c2sc,+scmp}]{Source Sans Pro}
 \setsansfont[Scale=MatchLowercase, BoldFont={Lato Bold}]{Lato Regular}
-% \setmonofont[Scale=MatchLowercase]{Source Code Pro}
+\setmonofont[Scale=MatchLowercase]{Source Code Pro}
 \RequirePackage[labelfont={bf,sf,footnotesize,singlespacing},
                 textfont={sf,footnotesize,singlespacing},
                 justification={justified,RaggedRight},
@@ -88,6 +86,8 @@
 \RequirePackage{microtype}
 
 
+
+
 % Headings and headers.
 \RequirePackage{fancyhdr}
 \RequirePackage[tiny, md, sc]{titlesec}
@@ -95,7 +95,8 @@
 \pagestyle{plain}
 \RequirePackage{titling}
 
-% Front matter.
+
+% % Front matter.
 \setcounter{tocdepth}{1}
 \usepackage[titles]{tocloft}
 \usepackage[titletoc]{appendix}
@@ -104,19 +105,32 @@
 \renewcommand\listfigurename{Listing of figures}
 \renewcommand\listtablename{Listing of tables}
 
-% References.
+% References. +  Chapter headings
 \renewcommand\bibname{References}
 \RequirePackage[super,comma,numbers]{natbib}
 \renewcommand{\bibnumfmt}[1]{[#1]}
-\RequirePackage[palatino]{quotchap}
-\renewcommand*{\chapterheadstartvskip}{\vspace*{-0.5\baselineskip}}
-\renewcommand*{\chapterheadendvskip}{\vspace{1.3\baselineskip}}
+\RequirePackage[palatino]{quotchap}  % creates the large headings
+\renewcommand*{\chapterheadstartvskip}{\vspace*{-6\baselineskip}}  % moving chapter heading up
+\renewcommand*{\chapterheadendvskip}{\vspace{1\baselineskip}}
+
+
+%% Overwriting spacing for non numbered chapters
+\renewcommand{\@makechapterhead}[1]{
+\chapterheadstartvskip
+{\size@chapter{\sectfont\raggedleft
+  {\chapnumfont
+   \ifnum \c@secnumdepth >\m@ne%
+    \if@mainmatter\thechapter\else\phantom{\thechapter}%
+  \fi\else\vspace{-0.5\baselineskip}\phantom{\thechapter}\fi
+  \par\nobreak}%
+{\raggedleft\advance\leftmargin10em\interlinepenalty\@M #1\par}}
+\nobreak\chapterheadendvskip}}
 
 % An environment for paragraph-style section.
-\providecommand\newthought[1]{%
-   \addvspace{1.0\baselineskip plus 0.5ex minus 0.2ex}%
-   \noindent\textsc{#1}%
-}
+% \providecommand\newthought[1]{%
+%    \addvspace{1.0\baselineskip plus 0.5ex minus 0.2ex}%
+%    \noindent\textsc{#1}%
+% }
 
 % Align reference numbers so that they do not cause an indent.
 \newlength\mybibindent
