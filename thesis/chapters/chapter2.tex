@@ -4,8 +4,6 @@ going over the design decisions on the project we first need to understand this
 background information and look at related work to see different approaches used
 to solve the problem.
 
-\newpage
-
 \section{Distributed Systems}
 %% TODO: Find nice intro
 
@@ -124,6 +122,177 @@ of unrealiable processes as long as a majority of them don't fail.
 
 Paxos is used for state machine replication and helps all the replicas achieve
 consensus on a result.
+
+Simple Paxos is an algorithm that helps a distributed network of processors to achieve consensus.
+Consensus is achieved when the network of processor agree on a common value.
+
+Safety Invariants:
+\begin{itemize}
+  \item A value can only be chosen after it has been proposed.
+  \item Only one value may be chosen.
+\end{itemize}
+
+A processor may have one or more of these three different roles - proposer, acceptor or learner.
+\begin{itemize}
+  \item \textbf{Proposer} - A process acting as a proposer listens for client
+    request and proposes a value which the network of processes tries to agree upon.
+  \item \textbf{Acceptor} - acceptors receive proposed values from the proposers
+    and then respond to them stating whether they are in a position to accept the value or not.
+    For a proposed value to be accepted, a majority of all the existing acceptors have to accept the proposed value.
+  \item \textbf{Learner} - The learner has to be informed when an acceptor accepts a value.
+    The learner can then figure out when consensus has been achieved by calculating
+    when a majority of acceptors have accepted the same proposal.
+    Once the acceptors agree on a value, the learner may act on the value
+    eg. Send request to client informing them about the agreed value.
+\end{itemize}
+
+
+Assumptions:
+\begin{itemize}
+  \item Processors communicate between each other by exchanging asynchronous messages between each other.
+    Asynchronous here means that messages may take arbitrarily long to be delivered.
+    Messages make be lost or duplicated but a processor will never receive a corrupted message.
+  \item Processors run at an arbitrary speed and may fail or restart.
+\end{itemize}
+
+\subsection{Choosing a Value}
+For passing around the value to be chosen from one processor to the other,
+a processor must send a 'proposal' to the other processor.
+You can think of a proposal as just a tuple $\lbrace proposal_number, proposal_value \rbrace$.
+$proposal_number$ is just a natural number associated with a proposal which makes
+it easy to keep track of all the different proposals.
+
+Consensus is achieved when a proposal is accepted by a majority of acceptors.
+
+There are a few requirements which are imposed for the algorithm to function correctly.
+The algorithm ensures that these invariants are maintained.
+\begin{enumerate}
+  \item \textbf{R1} An acceptor must accept the first proposal it receives.
+  \item \textbf{R2} Once consensus has been achieved on a proposal with value $v$
+    then every other proposal, with a higher $proposal_number$, on which consensus
+    is achieved will also have $proposal_value = v$.
+\end{enumerate}
+
+\textbf{R1} ensures that a value is agreed in the case when only a single value
+has been proposed by a single proposer. The most basic case is when you only have
+one acceptor. The acceptor can choose the first proposal that it receives from
+any of the proposers and then it can ignore the rest. The problem with using
+this is that if the single acceptor crashes then the algorithm won't make progress.
+
+So you need to have multiple acceptors but this is where the second problem arises.
+As multiple proposers might propose different values to different acceptors who
+might end up accepting different values.\textbf{R2} ensures that even though the
+acceptors might accept a proposal from a different proposer, all of the
+proposals accepted will have the same value. (Not sure about this)
+
+\subsection{The Algorithm}
+Simple Paxos algorithm runs in rounds until a consensus is achieved
+(a successful round has occurred). A successful round of the algorithm has two phases.
+%% TODO: Reference to proof of completion
+
+\begin{enumerate}
+  \item \textbf{Prepare Request} A proposer sends a Proposal $(n, v)$ to each acceptor in
+    a majority subset of all the acceptors. It then expects the following as a
+    response from each of the acceptors.
+    \begin{itemize}
+      \item A \textbf{Promise Response} which states that the acceptor,from now onwards,
+        won't accept a proposal with $proposal number < n$. (If the acceptor has
+        already made a promise to some other proposer to not accept proposals with
+        $proposal_number < m$ where $m > n$ then the acceptor can ignore this
+        Prepare request from this proposer by not responding to it.)
+      \item If the acceptor has already accepted one or more Proposals, it must
+        respond with the highest numbered Proposal it has accepted that also has
+        $proposal_number < n$.
+    \end{itemize}
+  \item \textbf{Accept Request} If a majority of acceptors respond to the the prepare request
+    the proposer can issue an accept request for a Proposal $(n, v')$ where
+    $v$ = (value of response with highest proposal number) or
+    (v if none of the responses contained any proposals)`.
+    \begin{itemize}
+      \item The proposer then sends this accept request another majority
+        subset of acceptors.
+      \item Any acceptor that receives the accept request responds with an
+        \textbf{Accepted Response} if and only if it hasn't already promised not to
+        accept any proposals with $proposal_number < m$ where $m > n$.
+    \end{itemize}
+\end{enumerate}
+
+%% Not sure if algorithm implementation is required
+%% can link to simulator in the appendix
+
+% #### Algorithm Implementation
+% The complete Python implementation is in the `single_decree_paxos` folder in the root of the repository.
+%
+% Here is some pseudocode showing how the various roles of the processor can be implemented.
+%
+% The acceptor needs to keep track of the highest number prepare request (promised number) it has responded to as it has promised not to accept any proposals with proposal number less that this number. The only other thing the acceptor needs to track is the highest number proposal that it has accepted in order to maintain `R2`.
+% Sending the `NACK` isn't necessary but considerably speeds up the algorithm.
+% ```
+% process acceptor(learner)
+%   var promised_number := None, highest_accepted_proposal := None;
+%   for ever
+%     switch receive()
+%       case (P, "Prepare", p_number):
+%         if p_number > promised_number then
+%           promised_number := p_number;
+%           send(P, ("Promise", p_number, highest_accepted_proposal));
+%         else
+%           send(P, ("NACK", p_number));
+%         end if
+%       end case
+%       case (P, "AcceptRequest", p_number, p_value):
+%         if p_number >= promised_number then
+%           highest_accepted_proposal = max(highest_accepted_proposal, (p_number, p_value));
+%           send(learner, ("Accepted", (p_number, p_value));
+%         else
+%           send(P, ("NACK", p_number));
+%         end if
+%       end case
+%     end switch
+%   end for
+% end process
+% ```
+%
+% ```
+% process proposer(acceptors, p_number, p_value)
+%   var waitfor := acceptors;
+%
+%   forall a in acceptors: send(a, ("Prepare", p_number));
+%   for ever
+%     switch receive()
+%       case (A, ("Promise", p_number, (p_number', p_value'))):
+%         waitfor := waitfor - {A};
+%         received_promises := received_promises U (p_number', p_value');
+%         if |waitfor| < |acceptors| / 2 then
+%           p_number'', p_value'' = max(received_promises) || p_value
+%           forall a in acceptors:
+%             send(a, ("AcceptRequest", p_number, p_value''))
+%       case (A, ("NACK", p_number')):
+%         exit();
+%     end switch
+%   end for
+% end process
+% ```
+
+\subsection{Informing learner}
+When consensus is achieved, a learner must be informed that a majority of acceptors
+have agreed on a value. There are various ways to do this.
+
+\begin{enumerate}
+  \item Whenever an acceptor accepts a value, it should send the accepted proposal
+    to all the learners. The learner will then know when a majority of acceptors
+    have accepted the same value.
+  \item We can have a $distinguished learner$ which informs other learners about
+    the choose value. The acceptors only need to inform this particular learner
+    when they accept a value. This reduces number of messages sent but the
+    distinguished learner becomes the single point of failure and also requires
+    an additional round of sending messages where the distinguished learner informs
+    other learners that a value has been chosen.
+  \item We can use a set of distinguished learners. The acceptors inform these
+    distinguished learners who then inform the other learners. This increases
+    reliability but also increases the number of messages exchanged.
+\end{enumerate}
+
 
 \section{Disel}
 
