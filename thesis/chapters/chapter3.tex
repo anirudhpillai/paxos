@@ -3,5 +3,57 @@
 \section{Detailed Problem Statement}
 
 \section{Requirements}
+\begin{enumerate}
+  \item Adapt Paxos for encoding in Disel and devise the state-transition system for this protocol.
+  \item Develop an inductive invariant for the adapted protocol that
+    ensures the protocol functions correctly by imposing requirements on the global state of the system
+  \item Implement a simulation of the adapted protocol with the developed state transition system.
+  \item Mechanise the proof of the adapted protocol in Disel/Coq.
+    Thereby, providing a library of reusable verified distributed components.
+  \item Mechanise a client application of the protocol verified out of the abstract interface.
+\end{enumerate}
 
 \section{Analysis}
+\subsection{Requirement 1: Adapted Protocol and State Transition System}
+Having studied the Paxos protocol in detail, we adapted the protocol for
+implementing it in Disel. We decided to focus on single decree paxos and to do
+away with the learner for the first version of the proof in order to prove the
+part of the protocol where consensus is achieved.
+
+We developed the state transition system for the nodes in the protocol. In Paxos
+each node can have different roles but we had to split up each role into different
+states depending on the current data held by the node and the current function
+ofthe node in the protocol. We decided on the states each node could be in and
+how and when it transitions between them. This helped us come up with precondition
+and postcondition for the state of each node when it transitions on receiving or
+sending a message. We tried to minimise the number of transitions and the data
+held in each node’s state in order to simplify the proof in Disel.
+
+\subsection{Requirement 2: Inductive Invariant}
+We also had to come up with an inductive invariant for the protocol such that if
+the inductive invariant holds in some state then in holds in every state reachable
+from that state. The inductive invariant was critical as it helped ensure that
+the protocol functions correctly by imposing requirements on the global state of
+the system. For proving the correctness of paxos we found that our invariant had
+to capture when consensus is achieved on a value and also that once consensus is
+achieved on a particular value, further rounds of the protocol don’t change this
+value. We then also came up with a proof for how this inductive invariant holds
+in our adapted protocol.
+
+\subsection{Requirement 3: Simulation}
+I have also implemented a simulator for Paxos in Python which is modeled according
+to how Disel works. The simulator is based on a state-transition system like Disel
+and uses separate processes to simulate different nodes in the distributed system.
+In the simulator, I implemented our adapted Paxos algorithm, with the state transitions
+we had decided to use with Disel. The working of the simulator gave us confidence
+that our state transition system for Paxos will work correctly in Disel.
+
+\subsection{Requirement 4: Proof}
+
+\subsection{Requirement 5: Client Application}
+After studying the Disel paper and looking at similar examples, I implemented the
+core of the adapted protocol in Disel. I also implemented a client application in
+Disel. The pre and post conditions from the state transition system helped me to
+implement the client application in such a way to adhere with the main protocol.
+Using the extraction feature in Disel and the shims runtime, I successfully
+extracted a working program of the client application in OCaml.

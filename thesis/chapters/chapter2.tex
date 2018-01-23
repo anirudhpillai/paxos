@@ -22,7 +22,7 @@ We will now go over a few concepts of distributed systems which will help us und
 the characteristics of the protocols that run on these systems. This will lay down the
 groundwork for us to understand the Paxos protocol on which this project is based.
 
-\subsubsection{Asynchronous Environment}
+\subsection{Asynchronous Environment}
 An asynchronous distributed system is one where there are no guarantees about the
 timing and order in which events occur.
 
@@ -36,7 +36,7 @@ in its design and try to achieve its goal without the guarantees of timed events
 An asynchronous environment is very common for a real world distributed system but
 it also makes reasoning about the system harder because of the aforementioned properties.
 
-\subsubsection{Fault Tolerance}
+\subsection{Fault Tolerance}
 A fault tolerant distributed system is one which can continue to function correctly
 despite the failure of some of its components. A 'failure' of a node or 'fault' in a node
 means any unexpected behaviour from that node eg. not responding to messages, sending
@@ -58,7 +58,7 @@ goals despite the failure of some of the components of the distributed system th
 The protocol accounts for the failures and generally specifies the maximum number of
 failures and the types of failures it can handle before it stops functioning correctly.
 
-\subsubsection{State Machine Replication}
+\subsection{State Machine Replication}
 %% TODO: Reference https://www.cs.cornell.edu/fbs/publications/SMSurvey.pdf
 
 For a client server model, the easiest way to implement it is to use one single server
@@ -99,7 +99,7 @@ we can successfully return a response to the client.
 
 %% TODO: Cover Byzantine Faults
 
-\subsubsection{Consensus Protocols}
+\subsection{Consensus Protocols}
 For handling faults in your distributed system you need to have replication.
 This leads to the problem of making all these replicas agree with each other
 to keep them consistent. Consensus protocols try to solve this problem.
@@ -307,5 +307,8 @@ have agreed on a value. There are various ways to do this.
 
 
 \section{Disel}
+
+\subsection{Inductive Invariant}
+
 
 \section{Related Work}

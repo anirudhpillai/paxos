@@ -94,7 +94,7 @@
 \setlength{\headheight}{15pt}
 %%%%%%%%%%%%%%%%%%% Making Subheadings Bold
 \titleformat{\section}{\fontsize{14}{16}\bfseries}{\thesection}{1em}{}
-\titleformat{\subsection}{\fontsize{14}{16}\bfseries}{\thesubsection}{1em}{}
+\titleformat{\subsection}{\fontsize{12}{14}\bfseries}{\thesubsection}{1em}{}
 %%%%%%%%%%%%%%%%%%%
 \pagestyle{plain}
 \RequirePackage{titling}
