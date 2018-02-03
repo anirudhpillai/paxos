@@ -127,5 +127,118 @@ to messages. This is similar to the \texttt{PAbort} state for the proposer.
 
 
 \subsection{Inductive Invariant}
+A critical part of proving our protocol in Disel was desiging an inductive invariant
+for our adapted protocol. The inductive invariant helps ensure the correctness of
+our adapted protocol enabling us to imposing requirements on the global state of the system.
+For proving the correctness of paxos we found that our invariant had to capture
+when consensus is achieved on a value and also that once consensus is achieved
+on a particular value, further rounds of the protocol don’t change this value.
+
+Inductive invariant means a property which when it holds for a state $s$,
+it will hold for any state $s'$ reachable from $s$.
+
+The crux of Paxos' correctness lies in the prepare phase where, before sending
+the accept request, the Proposer must first set the value of the proposal, that
+it wants to propose, to be the value of the highest numbered proposal it receives
+as a promise. This ensures that when consensus has been achieved on a value `v`,
+further rounds of the protocol also ensure that consensus will only be achieved on `v`.
+
+We established two invariants \textbf{I1} and \textbf{I2} which together form an inductive
+invariant for our protocol that also proves its safety.
+
+\begin{itemize}
+  \item \textbf{I1} simply tries to say that there can only be one unique value
+    associated with a particular proposal number for any proposal that has been accepted.
+  \item \textbf{I2} states that once consensus has been achieved on a value v,
+    every higher number proposal accepted by an acceptor also has the value v.
+\end{itemize}
+
+The mathematical representations for the invariants is given by.
+\begin{itemize}
+  \item \textbf{I1} - $\forall a_i, a_j \in A, \langle p_i, v_i \rangle \in a_{i}.accepted
+  \langle p_j, v_j \rangle \in to a_{j}.accepted \rightarrow v_i = v_j$.
+  %% TODO: Fix I2's representation
+  \item \textbf{I2} - $\forall \langle p_i, v_i \rangle,
+    \forall a_j \in A, \exists \langle p_j, v_j \rangle \in a_{j}.accepted,
+    p_j > p_i \rightarrow v_i = v_j$
+\end{itemize}
+
+%% TODO: Make this more eloquent
+\textbf{I1} is preserved because if there are n proposers, they are
+initialised with a unique proposal numbers and throughout the running of our
+adapted protocol, the proposer always uses this unique proposal number for any
+value that it proposes. Hence, two different proposers never propose a proposal
+with the same proposal number. Additionally, each proposer only sends one round
+of accept requests with the same proposal. So as each proposer proposes only one
+value with a unique proposal number, we can deduce that each accepted proposal
+will have a unique value associated with a particular proposal number.
+
+% ### Once a majority accepts a proposal, all the proposals accepted by the majority, have the same value.
+% Let *Majority* be a function which checks all the proposals accepted by
+% ever acceptor and returns the set of acceptors (if one exists) with
+% length >= N/2 + 1
+% (where N is the total number of acceptors) where each acceptor has
+% accepted a proposal of the form <p_no, v>. Here **p_no is same for all
+% the proposals**. In order for consensus to be achieved we need to show
+% that *v* is that same for all of these proposals as well, i.e, for all *a1, a2* belonging
+% to the *Majority(Acceptors)*, *a1* has accepted a proposal (p_no, v)
+% and *a2* has accepted a proposal (p_no, v') such that v = v'.
+%
+% > So if *Majority(Acceptors)* returns a set, then the system
+% has achieved consensus.
+
+Once consensus has been achieved on a value, further runs of the algorithm don't
+change the value on which consensus has been achieved.
+%% TODO: Reference
+% The proof for this is given in the 'Paxos Made Simple' paper by
+% Leslie Lamport.
+We need to show that once consensus has been achieved
+on a proposal with value $v$ then every other proposal, with a higher
+proposal number, on which consensus is achieved will also have
+proposal value set to $v$.
+
+In order for consensus to be achieved on a new proposal, the new
+proposal first needs to be accepted by an acceptor.
+
+$\Rightarrow$ If consensus has been achieved on a proposal
+$\langle p_1, v_1 \rangle$ then every other proposal $\langle p_2, v_2 \rangle$
+accepted by any acceptor, where $p_2 > p_1$, has $v_2 = v_1$.
+
+Further, acceptors can only accept a proposal which has been proposed
+by a proposer. So we can reduce the requirement as follows.
+
+$\Rightarrow$ If consensus has been achieved on a proposal $\langle p_1, v_1 \rangle$
+then every accept request $\langle p_2, v_2 \rangle$ sent by the proposer with
+$p_2 > p_1$, has $v_2 = v_1$.
+
+\begin{equation}
+\textrm{In order to prove the above, let's assume that consensus has been
+achieved on a proposal} \langle p_1, v_2 \rangle.
+\end{equation}
+
+After that lets say that the systems achieves consensus on
+$\langle p_2, v_2 \rangle$ where $p_2 > p_1$ and there does not exist $p_x$ such
+that consensus has been achieved on a proposal with proposal
+number $p_x$ where $p_1 < p_x < p_2$.
+
+So from our assumption (4.1), there must be a majority of acceptors
+such that they have accepted the proposal $\langle p_2, v_2 \rangle$.
+So we need to show that in $v_2 = v_1$.
+This is ensured in Paxos because of Phase 1 where the proposer must first
+get promises from a majority.
+
+So any majority the proposer for $p_2, v_2$ gets in Phase 1,
+will have at least one acceptor $a$ which has accepted $\langle p, v \rangle$.
+Paxos also ensures that before sending the accept request for
+$p_2, v_2$, the proposer must select the value of the highest numbered
+proposals which it receives in its promises.
+
+So the Acceptor $a$ will send $\langle p_1, v_1 \rangle$ in its promise message to
+the proposer. As $\langle p_2, v_2 \rangle$ is the only proposal number which has
+proposal number greater than $p$, the proposer must set $v_2 = v_1$ in its
+accept request message $\langle p_2, v_2 \rangle$ as $v_1$ is the value of the
+highest numbered proposal that it receives as a promise response.
+Thus, meeting our above requirement.
+
 
 \section{Verification}
