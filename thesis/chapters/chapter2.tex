@@ -1,0 +1,305 @@
+\chapter{Background}
+This chapter lays down all the previous research which the project builds on. Before
+going over the design decisions on the project we first need to understand this
+background information and look at related work to see different approaches used
+to solve the problem.
+
+\section{Distributed Systems}
+%% TODO: Find nice intro
+
+A distributed system is a model in which processes running on running different
+computers, which are connected together in a network, exchange messages to coordinate
+their action, often resulting in the user thinking of the entire system as one single
+unified computer.
+
+A computer in the distibuted system is also alternatively referred to as a
+processor or a node in the system. Each node in a distributed systems has its
+own memory.
+
+%% TODO: Structured in terms of client and servers
+
+We will now go over a few concepts of distributed systems which will help us understand
+the characteristics of the protocols that run on these systems. This will lay down the
+groundwork for us to understand the Paxos protocol on which this project is based.
+
+\subsection{Asynchronous Environment}
+An asynchronous distributed system is one where there are no guarantees about the
+timing and order in which events occur.
+
+The clocks of each of the process in the system can be out of sync and may not be
+accurate. Therefore, there can be no guarantees about the order in which events occur.
+
+Further, messages sent by one process to another can be delayed for an arbitary period of time.
+
+A protocol running in an asynchronous enviroment has to account for these conditions
+in its design and try to achieve its goal without the guarantees of timed events.
+An asynchronous environment is very common for a real world distributed system but
+it also makes reasoning about the system harder because of the aforementioned properties.
+
+\subsection{Fault Tolerance}
+A fault tolerant distributed system is one which can continue to function correctly
+despite the failure of some of its components. A 'failure' of a node or 'fault' in a node
+means any unexpected behaviour from that node eg. not responding to messages, sending
+corrupted messages.
+
+Fault tolerance is one of the main reasons for using a distributed system as it
+increases the chances of your application continuing to functioning correctly and
+makes it more dependable. As Netflix mention on their blog
+'Fault Tolerance is a Requirement, Not a Feature'.
+%% TODO: Reference https://medium.com/netflix-techblog/fault-tolerance-in-a-high-volume-distributed-system-91ab4faae74a
+With their Netflix API receiving more than 1 billion requests a day, they expect
+that it is guaranteed that some of the components of their distributed system will fail.
+Using a fault tolerant distributed system they are able to ensure that a small failure
+in some components doesn't hinder the performance of the overall system, hence,
+enabling them to achieve their uptime metrics.
+
+Fault tolerant distributed system protocols are protocols which achieve their
+goals despite the failure of some of the components of the distributed system they run on.
+The protocol accounts for the failures and generally specifies the maximum number of
+failures and the types of failures it can handle before it stops functioning correctly.
+
+\subsection{State Machine Replication}
+%% TODO: Reference https://www.cs.cornell.edu/fbs/publications/SMSurvey.pdf
+
+For a client server model, the easiest way to implement it is to use one single server
+which handles all the client request. Obviously this isn't the most robust solution
+as if the single server fails, so does your service. To overcome the problem you
+use a collection of servers each of which is a replica of the original single server and
+ensure that each of these 'replicas' fails independantly, without effecting the other replicas.
+This adds more fault tolerance.
+
+State Machine Replication is method for creating a fault tolerant distributed system
+by replicating servers and using protocols to coordinate the interactions of these
+replicated servers with the client.
+
+A State Machine $M$ can be defined as $M = \langle q_0, Q, I, O, \delta, \gamma \rangle$ where \\
+$q_0$ is the starting state \\
+$Q$ is the set of all possible states.
+$I$ is set of all valid inputs
+$O$ is the set of all valide outputs
+$\delta$ is the state transition function, $\delta : I x Q -> Q$
+$\gamma$ is the output function, $\gamma : I x Q -> O$
+
+The state machine begins in the start state and transitions to other states and
+produces outputs when it receives the inputs. The transition and output are found
+using the transition and output functions. A deterministic state machine is one
+whose state transition and output functions are injective, i.e. multiple
+copies of the machine when given the same input, pass through the same order of states
+and produce the same output in the same order.
+
+The method of modelling a distributed system protocol as state transition system
+is very common and is a critical component of this project as we will see soon when
+we need to encode our protocol in Disel.
+
+State machine replication involves modelling our single server, from the client
+server model, and using multiple copies (replicas) of the same deterministic
+state machine and providing all of them with the input from the client.
+As long as one of the replicas does not crash, while resolving the request,
+we can successfully return a response to the client.
+
+%% TODO: Cover Byzantine Faults
+
+\subsection{Consensus Protocols}
+For handling faults in your distributed system you need to have replication.
+This leads to the problem of making all these replicas agree with each other
+to keep them consistent. Consensus protocols try to solve this problem.
+
+Consensus protocols are the family of distibuted systems protocols which aim to
+make a distributed network of processes agree on one result.
+
+These protocols are of interest because of their numerous real world applications.
+Let us take the example of a distributed database, which is a critical part of almost
+all large scale real world applications. This distributed database will run
+over a network of computers and everytime you use the database you aren't guaranteed
+to be served by the same computer.
+
+Suppose you add a file to the database. This action is performed by the processor that
+was serving you 'add' request. Later when you want to retrieve the file from the database
+you might be served by a different computer that did not perform the 'add' request. Inorder
+for the new computer to know that the file exists in the database, you will need to use a
+consensus protocol which helps all the computers in the network (which handle user
+requests) agree upon the result that the file has been added to the database.
+
+Popular consensus protocols include PageRank used by Google and the Blockchain
+consensus protocol. George and Ilya verified a subset of the protocol in Coq in
+their Toychain paper.
+%% TODO: references
+
+
+\section{Paxos}
+Having understood the the main concepts behind distributed system protocols, we can
+now finally get to the protocol at the heart of this project. Paxos is a family of
+asynchronous, fault tolerant, consensus protocol which achieves consensus in a network
+of unrealiable processes as long as a majority of them don't fail.
+
+Paxos is used for state machine replication. Once you have multiple replicas
+servicing client requests, how do you makes sure that all of these replicas agree
+on what action to take? The solution is simply to use a consensus protocol like
+Paxos to make all replicas agree on something.
+
+Paxos has many variants but the one we will focus on is the one we actually prove
+in Disel, single decree Paxos, also know as simple paxos. Simple Paxos is an algorithm
+that helps a distributed network of processors to achieve consensus.
+Consensus is achieved when the network of processor agree on a common value.
+
+For simple paxos, we assume the following assumptions hold about the processors
+and the environment, in order for the protocol to function correctly.
+\begin{itemize}
+  \item Processors communicate between each other by exchanging asynchronous messages between each other.
+  \item Processors run at an arbitrary speed and may fail or restart. Handling this relates
+    to the fault tolerant nature of paxos. Also, we assume that Byzantine faults don't occur.
+    This means that all processors actually work together to try to achieve consensus on a value.
+    There are variants of paxos which can also handle Byzantine failure buy not simple paxos.
+    (This can be linked to the 'PBFT' paper which states that any algorithm handling
+    Byzantine faults must have three phases. Simple paxos only has two phases.)
+    %% TODO: References
+\end{itemize}
+
+As for fault tolerance of paxos, in order to handle a failure of upto $f$ processors,
+we need to have a minimum $2f+1$ processors participating in the algorithm. This
+means paxos functions correctly as long as a majority of the processors in the
+network do not fail. We will see shortly why just a majority needs to function
+correctly.
+
+A processor participating in simple paxos, may have one or more of these three
+different roles - proposer, acceptor or learner.
+\begin{itemize}
+  \item \textbf{Proposer} - A process acting as a proposer listens for client
+    request and proposes a value which the network of processes tries to agree upon.
+  \item \textbf{Acceptor} - acceptors receive proposed values from the proposers
+    and then respond to them stating whether they are in a position to accept the value or not.
+    For a proposed value to be accepted, a majority of all the existing acceptors
+    have to accept the proposed value.
+  \item \textbf{Learner} - The learner has to be informed when an acceptor accepts a value.
+    The learner can then figure out when consensus has been achieved by calculating
+    when a majority of acceptors have accepted the same proposal.
+    Once the acceptors agree on a value, the learner may act on the value
+    eg. Send request to client informing them about the agreed value.
+\end{itemize}
+
+% Safety Invariants:
+% \begin{itemize}
+%   \item A value can only be chosen after it has been proposed.
+%   \item Only one value may be chosen.
+% \end{itemize}
+
+\vspace{-4mm}
+\subsection{Choosing a Value}
+For passing around the value to be chosen from one processor to the other,
+a processor must send a 'proposal' to the other processor.
+You can think of a proposal as just a tuple $\langle n, v \rangle$.
+$n$ is just a natural number associated with a proposal which makes
+it easy to keep track of all the different proposals.
+
+A $quorum$ of acceptors is a subset of the set of all acceptors with length greater
+than $N/2$ where $N$ is the length of the set of acceptors. A $quorum$ is just
+a set denoting a majority of all the available acceptors.
+
+\begin{quote}
+Consensus is achieved when a proposal is accepted by a majority of acceptors.
+\end{quote}
+
+% There are a few requirements which are imposed for the algorithm to function correctly.
+% The implementations of the algorithm ensure that these requirements are maintained.
+% \begin{enumerate}
+%   \item \textbf{R1} An acceptor must accept the first proposal it receives.
+%   \item \textbf{R2} Once consensus has been achieved on a proposal,
+%     $\langle n_1, v_1 \rangle$ then every other proposal, $\langle n_2, v_2 \rangle$,
+%     on which consensus is achieved and has $n_2 > n_1$ will also have
+%     $v_2 = v_1$.
+% \end{enumerate}
+
+% \textbf{R1} ensures that a value is agreed in the case when only a single value
+% has been proposed by a single proposer. The most basic case is when you only have
+% one acceptor. The acceptor can choose the first proposal that it receives from
+% any of the proposers and then it can ignore the rest. The problem with using
+% this is that if the single acceptor crashes then the algorithm won't make progress.
+%
+% So you need to have multiple acceptors but this is where the second problem arises.
+% As multiple proposers might propose different values to different acceptors who
+% might end up accepting different values.\textbf{R2} ensures that even though the
+% acceptors might accept a proposal from a different proposer, all of the
+% proposals accepted will have the same value. (Not sure about this)
+
+\subsubsection{The Algorithm}
+Simple paxos runs in rounds until consensus is achieved (a successful round
+has occurred, where a majority of acceptors have accepted a proposal).
+A successful round of the algorithm has two phases, each of which can
+be subdivided into parts a, b.
+%% TODO: Reference to proof of completion
+
+\begin{itemize}
+  \item \textbf{Phase 1a: Prepare Request.}
+    A proposer sends a proposal
+    $\langle n, v \rangle$ to each acceptor in any randomly chosen $quorum$ of acceptors.
+    This first message that the proposer sends out is called a $prepare request$.
+    As it the proposer tries to 'prepare' the acceptors to 'accept' a value in the future.
+  \item \textbf{Phase 1b: Promise Response.}
+    An acceptor on receiving a prepare request, responds with a $promise response$,
+    if and only if the acceptor has not already sent a promise response with
+    a proposal containing a proposal number $n'$ where $n' > n$.
+
+    A promise response for proposal $\langle n, v \rangle$ is basically a
+    guarantee (a 'promise') that this acceptor will not respond to any
+    messages with proposals that have a proposal number $n'$ where $n' < n$.
+
+    Thus, if an incoming prepare request has proposal number less than what the
+    acceptor has already promised earlier, then the acceptor can ignore this
+    prepare request by not responding to it. Although, for speeding up the
+    protocol, the acceptor can send out a $nack response$ which tells the
+    proposer to stop trying to achieve consensus with this proposal.
+
+    If the acceptor has not sent any promise response before, then the body of
+    the promise response can be empty, otherwise the acceptor must include the
+    last proposal that it promised (before the current one) in the body of the
+    message.
+  \item \textbf{Phase 2b: Accept Request.}
+    If the proposer successfully receives promise responses from a majority of
+    acceptors, then it can send out an $accept request$. A accept request is
+    a message containing a proposal which tells an acceptor to accept this
+    proposal if it can.
+
+    The proposer creates a new proposal, $\langle n, v' \rangle$ where $n$ is
+    the same as in the proposal which the proposer sent in its prepare request.
+    But, $v'$ is the value from the highest numbered proposal, selected from all
+    the proposals that the proposer receives in the promise responses.
+    If none of the promise responses received by the proposer contain a proposal,
+    the proposer is free to set $v'$ to any value it likes.
+    The proposer then sends this accept request with proposal $\langle n, v' \rangle$
+    to another quorum of acceptors.
+  \item \textbf{Phase 2b: Accepted Response.}
+    Any acceptor that receives the accept request with proposal $\langle n, v \rangle$
+    responds with an accepted response if and only if it hasn't already promised
+    not to respond to any proposals with proposal number $n'$ where $n' > n$.
+\end{itemize}
+
+%% Not sure if algorithm implementation is required
+%% can link to simulator in the appendix
+
+\vspace{-4mm}
+\subsection{Informing learner}
+When consensus is achieved, a learner must be informed that a majority of acceptors
+have agreed on a value. There are various ways to do this.
+
+\begin{enumerate}
+  \item Whenever an acceptor accepts a value, it should send the accepted proposal
+    to all the learners. The learner will then know when a majority of acceptors
+    have accepted the same value.
+  \item We can have a distinguished learner which informs other learners about
+    the choose value. The acceptors only need to inform this particular learner
+    when they accept a value. This reduces number of messages sent but the
+    distinguished learner becomes the single point of failure and also requires
+    an additional round of sending messages where the distinguished learner informs
+    other learners that a value has been chosen.
+  \item We can use a set of distinguished learners. The acceptors inform these
+    distinguished learners who then inform the other learners. This increases
+    reliability but also increases the number of messages exchanged.
+\end{enumerate}
+
+
+\section{Disel}
+
+\subsection{Inductive Invariant}
+
+
+\section{Related Work}

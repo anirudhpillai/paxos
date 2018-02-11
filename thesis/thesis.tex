@@ -1,0 +1,37 @@
+\documentclass{thesis}
+
+\begin{document}
+
+
+\title{Mechanised Verification of Paxos-like Consensus Protocols}
+\author{Anirudh Pillai}
+
+\advisor{Dr. Ilya Sergey}
+
+\maketitle
+\abstractpage
+% \dedicationpage
+\acknowledgments
+\tableofcontents
+
+\setstretch{\dnormalspacing}
+
+\include{chapters/chapter1}
+\include{chapters/chapter2}
+\include{chapters/chapter3}
+\include{chapters/chapter4}
+\include{chapters/chapter5}
+\include{chapters/chapter6}
+
+\setstretch{\dnormalspacing}
+
+\clearpage
+\bibliography{references}
+\addcontentsline{toc}{chapter}{References}
+\bibliographystyle{apalike2}
+
+\begin{appendices}
+    \include{chapters/appendixA}
+\end{appendices}
+
+\end{document}
