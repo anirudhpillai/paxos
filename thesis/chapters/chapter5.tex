@@ -1,7 +1,143 @@
 \chapter{Client Application}
+As outlined in chapter 2, our approach to using Disel involved first coding
+the protocol and the client application, and then going on write the proofs.
+Having the client application working before writing the proofs gave us
+confidence that the design of our adapted protocol worked and could be used
+to achieve consensus.
+
+In this chapter we look at how we implemented a simple client application
+that uses the proof of our adapted protocol to create an implementation of nodes
+that achieve consensus on a value. We first look at how the client application was
+designed and coded in Disel then we look into how we used Disel's \texttt{shims}
+runtime to extract the OCaml code for the client. Finally, we will look at how
+we verfied the client application.
 
 \section{Modelling}
+Disel programs can be extracted into their corresponding OCaml definitions.
+The extracted code contains modules to that define the various node states
+and transitions. This extracted code can then be used by a shim to create a
+client application.
 
-\section{Verification}
+In order for the extraction to work, we need to assign a program to run for
+each node participating in the protocol. Additionnaly, each node needs to
+be given an initial state that satisifed all the imposed invariants.
+
+The design of our client application was very simple. We aimed to initialise
+two proposers, \texttt{proposer1} with proposal $\langle 1, 1\rangle$ and
+\texttt{proposer2} with proposal $\langle 2, 2\rangle$ along with three different
+acceptors.
+
+Having decided on this, we needed to write the runnable implementation of a
+proposer and an acceptor which each of these nodes can run as programs. Here we
+will only look at the implementation of the proposer, the implementation of
+the acceptor follows from that and can be found in the \texttt{PaxosAcceptor.v} file.
+
+As a proposer starts off in the \texttt{PInit} state, the runnable implementation
+of a proposer needs to take in a proposal as a parameter which it will use to
+initilise the proposer with. Below is the main function for the proposer.
+It first sends out the prepare requests and then starts receiving responses
+from the acceptors. \texttt{check\_promises} function checks that none of the
+responses contain a nack request. If no nacks were received then the proposer
+sends accept requests to all the acceptors by choosing the value from the
+highest numbered proposal.
+
+\begin{lstlisting}
+Program Definition proposer_round (psal: proposal):
+  {(e : nat)}, DHT [p, W]
+  (fun i => loc i = st :-> (e, PInit psal),
+   fun res m => loc m = st :-> (e.+1, PAbort))
+  :=
+  Do (e <-- read_round;
+      send_prepare_req_loop e psal;;
+      recv_promises <-- receive_prepare_resp_loop e;
+      check <-- check_promises recv_promises;
+      if check
+      then send_accept_reqs e (choose_highest_numbered_proposal psal recv_promises)
+      else send_accept_reqs e [:: 0; 0]).
+     (* If check fails then send an acc_req for (0, 0) which will never be
+        accepted by any acceptor *)
+\end{lstlisting}
+
+Although, if a nack was recieved, the proposal still sends
+accept requests with the proposal $\langle 0, 0 \rangle$. This proposal will
+never be accepted by any acceptor as its proposal number is not greater than 0.
+We still need to send these accept requests as both branches of a \texttt{if}
+statement need to have the same type.
+
+One can also see the distributed Hoare types and the pre and post conditions
+defined above. Once the proposer finished the round, it ends up in the \texttt{PAbort}
+state with its round number incremented. A proposer will only have one go at achieving
+consensus and will not try again if it fails. This corresponds to the decision we
+made while designing the adapted protocol.
 
 \section{Extraction}
+Before running the extraction, we need the \texttt{SimplePaxosApp.v} file
+which defines the code to instantiate the nodes.
+Our client implementation instantiates two proposers and three acceptors.
+Each proposer is instantiated with a unique proposol which is required in the
+\texttt{PInit} state.
+
+\begin{lstlisting}
+(* [Run] Runnable proposer code *)
+Program Definition run_proposer p psal:
+  DHT [p, _] (
+    fun i => network_rely W p init_state i,
+    fun _ m => exists (r : nat),
+    getLocal p (getStatelet m l) = st :-> (r, PInit psal))
+  := Do (with_inv (PaxosInductiveInv.ii _ _ _) (proposer p psal)).
+...
+
+(* [Run] Runnable nodes *)
+Program Definition run_proposer1 := run_proposer p1 psal_1.
+
+...
+(* [Run] Final programs to run with actual arguments supplied *)
+Definition p_runner1 (u : unit) := run_proposer1 [:: 1; 1].
+\end{lstlisting}
+
+After extracting the Coq code, we then wrote a shim file (\texttt{PaxosMain.ml})
+that parses the arguement supplied to it and instantiates a program specified
+for the given node. Below is the main function from the shim file.
+
+\begin{lstlisting}
+let main () =
+  parse_args (List.tl (Array.to_list Sys.argv));
+  match !mode, !me with
+  | Some mode, Some me ->
+    begin
+      Shim.setup { nodes = !nodes; me = me; st = SimplePaxosApp.init_state };
+      match mode with
+      | Acceptor ->
+        begin match int_of_nat me with
+        | 3 -> SimplePaxosApp.a_runner1 ()
+        | 4 -> SimplePaxosApp.a_runner2 ()
+        | 5 -> SimplePaxosApp.a_runner3 ()
+        | n -> usage ("unknown acceptor name " ^ string_of_int n)
+        end
+      | Proposer ->
+        begin match int_of_nat me with
+        | 1 ->
+          begin
+            try
+              SimplePaxosApp.p_runner1 ()
+            with _ -> print_endline "A acceptor closed its connection, proposer exiting."
+          end
+        | 2 ->
+          begin
+            try
+              SimplePaxosApp.p_runner2 ()
+            with _ -> print_endline "A acceptor closed its connection, proposer exiting."
+          end
+        | n -> usage ("unknown proposer name " ^ string_of_int n)
+        end
+    end
+  | _, _ -> usage "-mode and -me must be given"
+\end{lstlisting}
+
+Finally, we had to write a shell script to call the shim file with the separate
+arguements to instantiate all the different nodes as different processes.
+%% TODO: Add logs showing consensus being achieved.
+
+\section{Verification}
+Once we could run the client implementation and see consensus being achieved,
+we then moved on to writing the proofs for the implementation.
