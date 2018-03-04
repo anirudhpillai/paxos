@@ -386,8 +386,78 @@ Definition send_prepare_req_prec (p: StateT) (m: payload) :=
 \end{lstlisting}
 
 \subsection{Protocol to Programs}
+The state transitions that we implement in the protocol encoding phase, are the
+first step towards creating executable programs using Disel.
+We can then use the library of \textit{transition wrappers} provided by Disel
+that allow one to decorate low level send/receive primitives with the transitions
+that we have defined. These decorated primitives can later on be used to extract
+code for executable programs. In Chapter 5, we will dive into the details of
+how we extracted the code for our client application running Paxos.
 
-\subsection{Protocol Encoding}
+The \texttt{send\_action\_wrapper} wrapper provided by Disel takes a send transition encoded
+by us and returns a program that will send a message.
+\begin{lstlisting}
+Program Definition send_prepare_req psal to :=
+  act (@send_action_wrapper W paxos p l (prEq paxos)
+       (send_prepare_req_trans proposers acceptors) _ psal to).
+\end{lstlisting}
+
+The \texttt{tryrecv\_action\_wrapper} is similar but the main difference is that in
+a received transition, we may received messages from any of the multiple protocols
+that might be executing at the time. To address this problem, we need to check the
+tag $t$ returned by the receive wrapper and ensure that this tag belongs to the
+protocol that was specified in the wrapper. In the code example below, we check
+that the received message is either a \texttt{promise\_resp} or a \texttt{nack\_resp}
+both of which belong to the \texttt{paxos} protocol and are valid reponses to a
+\texttt{prepare\_req}.
+If an incoming message matches the conditions specified, the wrapper returns
+\texttt{Some(from, m)} where $m$ is the message and $from$ is the sender. Otherwise
+it returns \texttt{None}.
+
+\begin{lstlisting}
+(* Non blocking receive *)
+Program Definition tryrecv_prepare_resp := act (@tryrecv_action_wrapper W p
+      (* filter *)
+      (fun k _ t b => (k == l) && ((t == promise_resp) || (t == nack_resp))) _).
+\end{lstlisting}
+
+These low level primitives can then be combined together for specifying the roles
+of each node in the protocol. We can use the \texttt{send\_prepare\_req} to
+come up with \texttt{send\_prepare\_req\_loop} which every proposer performs when
+it starts up. These functions can then futher be combined together to give the
+entire implementation of a node. \texttt{proposer\_round} below is the program
+that each node acting a proposer executes.
+\begin{lstlisting}
+Program Definition send_prepare_req_loop e (psal: proposal):
+  {(pinit: proposal)}, DHT [p, W]
+  (fun i => loc i = st :-> (e, PInit pinit),
+   fun r m => r = tt /\
+              loc m = st :-> (e, PWaitPrepResp [::] pinit)) :=
+  Do (ffix (fun (rec : send_prepare_req_loop_spec e) to_send =>
+              Do (match to_send with
+                  | to :: tos => send_prepare_req psal to ;; rec tos
+                  | [::] => ret _ _ tt
+                  end)) acceptors).
+
+Program Definition proposer_round (psal: proposal):
+  {(e : nat)}, DHT [p, W]
+  (fun i => loc i = st :-> (e, PInit psal),
+   fun res m => loc m = st :-> (e.+1, PAbort))
+  :=
+  Do (e <-- read_round;
+      send_prepare_req_loop e psal;;
+      recv_promises <-- receive_prepare_resp_loop e;
+      check <-- check_promises recv_promises;
+      if check
+      then send_accept_reqs e (choose_highest_numbered_proposal psal recv_promises)
+      else send_accept_reqs e [:: 0; 0]).
+     (* If check fails then send an acc_req for (0, 0) which will never be
+        accepted by any acceptor *)
+\end{lstlisting}
+
+Once this implementation has been finished in Disel we can use Disel's extraction
+capabilities to extract the OCaml code for executing the program. (Outlined in Chapter 5)
+
 
 \subsection{Approach to Mechanising Proofs in Disel}
 % (1) Write code before proofs and run/test it;
@@ -405,12 +475,20 @@ Definition send_prepare_req_prec (p: StateT) (m: payload) :=
 % You might want to make a point that even without verifying inductive invariants, we already can get relatively strong correctness properties just by verifying (1)-(2).
 %
 % (1)-(2) is also sort of delivered by this work: https://eb.host.cs.st-andrews.ac.uk/writings/tdd-conc.pdf
+%
+% 1. I suggest you first
+%   give a textual description with a lot of intuition about what kind of client
+%   we are interested in and what properties it can observe that are guaranteed by the consensus.
+% 2. Then you specify this property formally and sketch its proof.
+%
+% The client application does only need to have a couple of RPC-like procedures.
+% It doesn't have to know about the entire protocol.
 
-\subsubsection{1. Code the client application and the protocol}
+\subsubsection{1. Code the client application}
 
-\subsubsection{2. Prove the protocol and client application}
+\subsubsection{2. Prove that the code follows the protocol}
 
-\subsubsection{3. Implement and prove the invariant}
+\subsubsection{3. Implement and prove the protocol and the invariant}
 
 
 
