@@ -13,21 +13,33 @@ runtime to extract the OCaml code for the client. Finally, we will look at how
 we verfied the client application.
 
 \section{Modelling}
-Disel programs can be extracted into their corresponding OCaml definitions.
-The extracted code contains modules to that define the various node states
-and transitions. This extracted code can then be used by a shim to create a
-client application.
+%% TODO: give a textual description with a lot of intuition about what kind of client
+%   we are interested in and what properties it can observe that are guaranteed by the consensus.
 
-In order for the extraction to work, we need to assign a program to run for
-each node participating in the protocol. Additionnaly, each node needs to
-be given an initial state that satisifed all the imposed invariants.
+The main property that we want to observe from the client is the acceptors achieving
+consensus on a proposal. This meant we needed to be able to see that a majority of
+acceptors accepting a protocol and that all of the acceptors in the majority
+accept the same protocol.
 
-The design of our client application was very simple. We aimed to initialise
-two proposers, \texttt{proposer1} with proposal $\langle 1, 1\rangle$ and
-\texttt{proposer2} with proposal $\langle 2, 2\rangle$ along with three different
-acceptors.
+Furthermore, we needed the client application to follow the same state transition
+system we designed for our adapted protocol. Thus, the correct functioning of the
+client will give us confidence that our adapted protocol can be proved. This also
+enables us to catch flaws in our design of the adapted protocol early on and helps
+us detect things like unnecessary states early on in the process, which makes the
+proving the protocol easier in the later stages.
 
-Having decided on this, we needed to write the runnable implementation of a
+So our client was simple in that we wanted to initialise two proposers and three
+acceptors and then see the acceptors achieve consensus. Each proposal that is intialised
+will only try once to achieve consensus using the proposal number that it is initialised
+with. If it receives a nack in the process, then it stops and does not retry to
+achieve consensus with a higher proposal number. As explained in the previous
+chapter, we choose this 'one shot' process for the proposer in order to focus on
+just on the part where consensus is achieved, where the proposer accumulates
+enough promises and then sends out an accept request which then may be accepted
+by each of the acceptors.
+
+\section{Implementation}
+Having decided on the design of the client, we needed to write the runnable implementation of a
 proposer and an acceptor which each of these nodes can run as programs. Here we
 will only look at the implementation of the proposer, the implementation of
 the acceptor follows from that and can be found in the \texttt{PaxosAcceptor.v} file.
@@ -71,6 +83,20 @@ consensus and will not try again if it fails. This corresponds to the decision w
 made while designing the adapted protocol.
 
 \section{Extraction}
+Disel programs can be extracted into their corresponding OCaml definitions.
+The extracted code contains modules to that define the various node states
+and transitions. This extracted code can then be used by a shim to create a
+client application.
+
+In order for the extraction to work, we need to assign a program to run for
+each node participating in the protocol. Additionnaly, each node needs to
+be given an initial state that satisifed all the imposed invariants.
+
+The design of our client application was very simple. We aimed to initialise
+two proposers, \texttt{proposer1} with proposal $\langle 1, 1\rangle$ and
+\texttt{proposer2} with proposal $\langle 2, 2\rangle$ along with three different
+acceptors.
+
 Before running the extraction, we need the \texttt{SimplePaxosApp.v} file
 which defines the code to instantiate the nodes.
 Our client implementation instantiates two proposers and three acceptors.
@@ -137,7 +163,3 @@ let main () =
 Finally, we had to write a shell script to call the shim file with the separate
 arguements to instantiate all the different nodes as different processes.
 %% TODO: Add logs showing consensus being achieved.
-
-\section{Verification}
-Once we could run the client implementation and see consensus being achieved,
-we then moved on to writing the proofs for the implementation.

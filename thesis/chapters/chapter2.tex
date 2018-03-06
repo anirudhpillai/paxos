@@ -484,7 +484,14 @@ capabilities to extract the OCaml code for executing the program. (Outlined in C
 % The client application does only need to have a couple of RPC-like procedures.
 % It doesn't have to know about the entire protocol.
 
+We will now look at how one can use Disel to mechanise the proofs of a protocol.
+There are three stages (1) - (3) and the more stages you complete the stronger
+your proof will be. We also followed this process for proving Paxos. We completed
+stages (1) and (2) and reached till proving the protocol in stage (3). Only proving
+the inductive invariant in Disel was done.
+
 \subsubsection{1. Code the client application}
+
 
 \subsubsection{2. Prove that the code follows the protocol}
 
