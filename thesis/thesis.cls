@@ -19,11 +19,21 @@
 
 % Line Spacing
 %   Define two line spacings: one for the body, and one that is more compressed.
+
+%% This looks good
+% \iftoggle{DissertateSingleSpace}{
+%     \newcommand{\dnormalspacing}{1.2}
+%     \newcommand{\dcompressedspacing}{1.0}
+% }{
+%     \newcommand{\dnormalspacing}{1.5}  % Setting line spacing to 1.5
+%     \newcommand{\dcompressedspacing}{1.2}
+% }
+
 \iftoggle{DissertateSingleSpace}{
-    \newcommand{\dnormalspacing}{1.2}
+    \newcommand{\dnormalspacing}{1.0}
     \newcommand{\dcompressedspacing}{1.0}
 }{
-    \newcommand{\dnormalspacing}{1.5}  % Setting line spacing to 1.5
+    \newcommand{\dnormalspacing}{1.3}  % Setting line spacing to 1.5
     \newcommand{\dcompressedspacing}{1.2}
 }
 
