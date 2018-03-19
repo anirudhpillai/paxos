@@ -1,1 +1,50 @@
-\chapter{Interim Report}
+\chapter{Project Plan}
+
+\section{Aims}
+To learn about the family of Paxos-like consensus protocols and then to formulate a proof of their correctness by implementing a library of reusable verified distributed components using Disel. Disel is a framework for compositional verification of distributed protocols, built on top of Coq proof assistant, to verify correctness of the implemented components.
+Hence, this project will help me learn about the workings of distributed protocols and how to reason about their correctness.
+
+\section{Objectives}
+\begin{enumerate}
+  \item Read about and understand the classical Paxos-like consensus algorithms. Develop state transition systems for the algorithms and identify the invariants that need to be preserved during the operation of the algorithm.
+  \item Implement a simulation of the protocols in Python.
+  \item Formulate the implemented protocols in Disel by using the developed state-transition systems.
+  \item Mechanise the proofs of the identified protocol invariants in Disel/Coq.
+  \item Add additional communication channels and prove composite invariants.
+  \item Provide an abstract specification of the protocol, usable by third-party clients.
+  \item Mechanise a client application of the protocol verified out of the abstract interface.
+\end{enumerate}
+
+\section{Expected Deliverables}
+\begin{itemize}
+  \item Descriptions of the state-transition system and invariants of the Paxos-like Consensus protocols.
+  \item Python implementation of simulations of the Paxos-like Consensus protocols.
+  \item Proofs of correctness of the implemented protocols in Disel. Thereby, providing a library of reusable verified distributed components written in Disel/Coq.
+\end{itemize}
+
+\section{Work Plan}
+\begin{itemize}
+\itemsep0em
+  \item Project start to end October (4 weeks).
+    \begin{itemize}
+      \item Read about and understand the workings of Paxos-like Consensus protocols.
+      \item Implement the protocols in Python.
+    \end{itemize}
+  \item November start to mid-December (6 weeks).
+    \begin{itemize}
+      \item Create state transition diagrams and identify invariants of the protocols.
+      \item Formulate the protocols in Disel.
+      \item Prove correctness of the identified protocol invariants in Disel/Coq.
+    \end{itemize}
+  \item Mid-December (8 weeks) to mid February.
+    \begin{itemize}
+      \item Iterate on the Disel proof to make it more concise.
+      \item Formulate the abstract interface.
+      \item Verify a simple client application.
+    \end{itemize}
+  \item January start to March end (12 weeks).
+    \begin{itemize}
+      \item Submit Interim Report (due in late January).
+      \item Work on Final Report.
+    \end{itemize}
+\end{itemize}

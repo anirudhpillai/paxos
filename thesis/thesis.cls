@@ -33,7 +33,7 @@
     \newcommand{\dnormalspacing}{1.0}
     \newcommand{\dcompressedspacing}{1.0}
 }{
-    \newcommand{\dnormalspacing}{1.3}  % Setting line spacing to 1.5
+    \newcommand{\dnormalspacing}{1.4}  % Setting line spacing to 1.5
     \newcommand{\dcompressedspacing}{1.2}
 }
 
