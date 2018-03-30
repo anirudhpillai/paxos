@@ -427,6 +427,7 @@ come up with \texttt{send\_prepare\_req\_loop} which every proposer performs whe
 it starts up. These functions can then futher be combined together to give the
 entire implementation of a node. \texttt{proposer\_round} below is the program
 that each node acting a proposer executes.
+
 \begin{lstlisting}
 Program Definition send_prepare_req_loop e (psal: proposal):
   {(pinit: proposal)}, DHT [p, W]
