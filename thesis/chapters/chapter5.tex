@@ -7,14 +7,15 @@ to achieve consensus.
 
 In this chapter we look at how we implemented a simple client application
 that uses the proof of our adapted protocol to create an implementation of nodes
-that achieve consensus on a value. We first look at how the client application was
-designed and coded in Disel then we look into how we used Disel's \texttt{shims}
-runtime to extract the OCaml code for the client. Finally, we will look at how
-we verfied the client application.
+that achieve consensus on a value. This chapter first looks at how the client
+application was designed and encoded in Disel. After which we look into how
+Disel's \texttt{shims} runtime was used to extract the OCaml code for the client.
+Finally, we outline how we extended the client application by writing a
+wrapper around it.
 
 \section{Modelling}
-%% TODO: give a textual description with a lot of intuition about what kind of client
-%   we are interested in and what properties it can observe that are guaranteed by the consensus.
+% Give a textual description with a lot of intuition about what kind of client
+% we are interested in and what properties it can observe that are guaranteed by the consensus.
 
 The main property that we want to observe from the client is the acceptors achieving
 consensus on a proposal. This meant we needed to be able to see that a majority of
@@ -25,7 +26,7 @@ Furthermore, we needed the client application to follow the same state transitio
 system we designed for our adapted protocol. Thus, the correct functioning of the
 client will give us confidence that our adapted protocol can be proved. This also
 enables us to catch flaws in our design of the adapted protocol early on and helps
-us detect things like unnecessary states early on in the process, which makes the
+us detect things like unnecessary states early on in the process, which makes
 proving the protocol easier in the later stages.
 
 So our client was simple in that we wanted to initialise two proposers and three
@@ -33,14 +34,15 @@ acceptors and then see the acceptors achieve consensus. Each proposal that is in
 will only try once to achieve consensus using the proposal number that it is initialised
 with. If it receives a nack in the process, then it stops and does not retry to
 achieve consensus with a higher proposal number. As explained in the previous
-chapter, we choose this 'one shot' process for the proposer in order to focus on
-just on the part where consensus is achieved, where the proposer accumulates
-enough promises and then sends out an accept request which then may be accepted
-by each of the acceptors.
+chapter, we choose this `one shot' process for the proposer in order to focus on
+just on the part of the protocol where consensus is achieved, i.e. where the proposer
+accumulates enough promises and then sends out an accept request which then may
+be accepted by each of the acceptors.
 
-\section{Implementation}
-Having decided on the design of the client, we needed to write the runnable implementation of a
-proposer and an acceptor which each of these nodes can run as programs. Here we
+\section{Encoding client in Disel}
+Having decided on the design of the client, the next step was to produce a
+runnable implementation of a
+proposer and an acceptor which each of the nodes in the protocol can run as programs. Here we
 will only look at the implementation of the proposer, the implementation of
 the acceptor follows from that and can be found in the \texttt{PaxosAcceptor.v} file.
 
@@ -57,7 +59,7 @@ highest numbered proposal.
 Program Definition proposer_round (psal: proposal):
   {(e : nat)}, DHT [p, W]
   (fun i => loc i = st :-> (e, PInit psal),
-   fun res m => loc m = st :-> (e.+1, PAbort))
+   fun res m => loc m = st :-> (e, PAbort))
   :=
   Do (e <-- read_round;
       send_prepare_req_loop e psal;;
@@ -74,13 +76,10 @@ Although, if a nack was recieved, the proposal still sends
 accept requests with the proposal $\langle 0, 0 \rangle$. This proposal will
 never be accepted by any acceptor as its proposal number is not greater than 0.
 We still need to send these accept requests as both branches of a \texttt{if}
-statement need to have the same type.
+statement need to have the same type. The distributed Hoare types and the pre and post conditions
+defined are also show in the code listing. The proposer starts off in the \texttt{PInit}
+state and on finishing the round, ends up in the \texttt{PAbort}.
 
-One can also see the distributed Hoare types and the pre and post conditions
-defined above. Once the proposer finished the round, it ends up in the \texttt{PAbort}
-state with its round number incremented. A proposer will only have one go at achieving
-consensus and will not try again if it fails. This corresponds to the decision we
-made while designing the adapted protocol.
 
 \section{Extraction}
 Disel programs can be extracted into their corresponding OCaml definitions.
@@ -88,78 +87,159 @@ The extracted code contains modules to that define the various node states
 and transitions. This extracted code can then be used by a shim to create a
 client application.
 
-In order for the extraction to work, we need to assign a program to run for
-each node participating in the protocol. Additionnaly, each node needs to
+In order for the extraction to work, a runnable program needs to be supplied for each of
+the nodes participating in the protocol. Additionnaly, each node needs to
 be given an initial state that satisifed all the imposed invariants.
 
-The design of our client application was very simple. We aimed to initialise
-two proposers, \texttt{proposer1} with proposal $\langle 1, 1\rangle$ and
-\texttt{proposer2} with proposal $\langle 2, 2\rangle$ along with three different
-acceptors.
-
-Before running the extraction, we need the \texttt{SimplePaxosApp.v} file
-which defines the code to instantiate the nodes.
-Our client implementation instantiates two proposers and three acceptors.
+The \texttt{SimplePaxosApp.v} file uses the runnable implementations of
+the proposer and acceptor and defines the code to instantiate the nodes.
+The client implementation instantiates two proposers and three acceptors.
 Each proposer is instantiated with a unique proposol which is required in the
-\texttt{PInit} state.
+\texttt{PInit} state (the state in which each proposer starts off in).
+
+Extracting this code using Disel produces the OCaml code
+that can be used to run each of the nodes. After extracting the code,
+a shim file (\texttt{PaxosMain.ml}) is written that parses the arguments
+supplied to it and instantiates a program specified
+for the given node. Compiling the shim file produces the executable (\texttt{PaxosMain.d.byte})
+which can be supplied with the right arguments to set up execution of one
+of the nodes participating in the protocol.
+
+The executable was used in a shell script (\texttt{paxos.sh})
+to instantiate all the different nodes as different processes.
+Below are the logs produced by one of the
+proposers (node 2) on running this script. Nodes 3, 4 and 5 are acceptors while
+node 1 is the other proposer proposing value 1.
 
 \begin{lstlisting}
-(* [Run] Runnable proposer code *)
-Program Definition run_proposer p psal:
-  DHT [p, _] (
-    fun i => network_rely W p init_state i,
-    fun _ m => exists (r : nat),
-    getLocal p (getStatelet m l) = st :-> (r, PInit psal))
-  := Do (with_inv (PaxosInductiveInv.ii _ _ _) (proposer p psal)).
-...
-
-(* [Run] Runnable nodes *)
-Program Definition run_proposer1 := run_proposer p1 psal_1.
-
-...
-(* [Run] Final programs to run with actual arguments supplied *)
-Definition p_runner1 (u : unit) := run_proposer1 [:: 1; 1].
+initial state is: [0 |-> {dstate = [1 |-> [1 |-> <heap>], 3 |-> [1 |-> <heap>], 4 |-> [1 |-> <heap>], 5 |-> [1 |-> <heap>]]; dsoup = <>}]
+World is [0 |-> <protocol with label 0>]
+sending msg in protocol 0 with tag = 0, contents = [2; 2] to 3
+World is [0 |-> <protocol with label 0>]
+sending msg in protocol 0 with tag = 0, contents = [2; 2] to 4
+World is [0 |-> <protocol with label 0>]
+sending msg in protocol 0 with tag = 0, contents = [2; 2] to 5
+new connection!
+done processing new connection from node 3
+got msg in protocol 0 with tag = 1, contents = [0; 0] from 3
+new connection!
+done processing new connection from node 4
+got msg in protocol 0 with tag = 1, contents = [0; 0] from 4
+new connection!
+done processing new connection from node 5
+got msg in protocol 0 with tag = 1, contents = [0; 0] from 5
+World is [0 |-> <protocol with label 0>]
+sending msg in protocol 0 with tag = 3, contents = [2; 2] to 3
+World is [0 |-> <protocol with label 0>]
+sending msg in protocol 0 with tag = 3, contents = [2; 2] to 4
+World is [0 |-> <protocol with label 0>]
+sending msg in protocol 0 with tag = 3, contents = [2; 2] to 5
 \end{lstlisting}
 
-After extracting the Coq code, we then wrote a shim file (\texttt{PaxosMain.ml})
-that parses the arguement supplied to it and instantiates a program specified
-for the given node. Below is the main function from the shim file.
+The tags identify the messages types. The mapping for the tags is defined in
+our protocol \texttt{PaxosProtocol.v} as follows.
 
 \begin{lstlisting}
-let main () =
-  parse_args (List.tl (Array.to_list Sys.argv));
-  match !mode, !me with
-  | Some mode, Some me ->
-    begin
-      Shim.setup { nodes = !nodes; me = me; st = SimplePaxosApp.init_state };
-      match mode with
-      | Acceptor ->
-        begin match int_of_nat me with
-        | 3 -> SimplePaxosApp.a_runner1 ()
-        | 4 -> SimplePaxosApp.a_runner2 ()
-        | 5 -> SimplePaxosApp.a_runner3 ()
-        | n -> usage ("unknown acceptor name " ^ string_of_int n)
-        end
-      | Proposer ->
-        begin match int_of_nat me with
-        | 1 ->
-          begin
-            try
-              SimplePaxosApp.p_runner1 ()
-            with _ -> print_endline "A acceptor closed its connection, proposer exiting."
-          end
-        | 2 ->
-          begin
-            try
-              SimplePaxosApp.p_runner2 ()
-            with _ -> print_endline "A acceptor closed its connection, proposer exiting."
-          end
-        | n -> usage ("unknown proposer name " ^ string_of_int n)
-        end
-    end
-  | _, _ -> usage "-mode and -me must be given"
+Definition prepare_req : nat := 0.
+Definition promise_resp : nat := 1.
+Definition nack_resp : nat := 2.
+Definition accept_req : nat := 3.
 \end{lstlisting}
 
-Finally, we had to write a shell script to call the shim file with the separate
-arguements to instantiate all the different nodes as different processes.
-%% TODO: Add logs showing consensus being achieved.
+Thus, the logs show that the proposer first sent out prepare request
+(\texttt{tag = 1}) with the proposal $\langle 2, 2 \rangle$
+to the three acceptors and received promise responses back from them (\texttt{tag = 1}).
+After this proposer sent out an accept request (\texttt{tag = 3}) to each of
+the acceptors.
+
+\section{Extending the extracted code}
+The previous steps helped setup a simple client application but the logs
+only show what happened at each individual node. Moreover, the important part is
+to find out when the entire system has achieved consensus, i.e. a majority of
+acceptors has accepted the same proposal.
+
+One way of making the client do this would be to go back to the Disel code and
+write the implementation of a learner and define an $accepted$ message that will
+be sent from an acceptor to a learner whenever it accepts a proposal. This learner
+can then tell us when the entire system has achieved consensus. This method is
+time consuming because one will have to do all the encoding similar to that for
+the proposer or acceptor. Although, the final output of this will be a fully
+verified client where the actions of the learner also adhere to our protocol.
+
+A quicker way to implement the same functionality is to write a
+wrapper around the extracted code that enables communication with the
+acceptor. The wrapper can keep checking when each of the acceptors has accepted
+a proposal and can compare the values in those proposals. Using this the wrapper
+can `announce' when the system has achieved consensus. An example wrapper which
+uses the extracted code is implemented in the \texttt{paxos.py} file.
+Writing such wrappers helps to extend the functionality of the extracted
+client application and also shows that the client application can be used in
+other applications where it provides a verified implementation of paxos.
+
+
+\section{Verifying client in Disel}
+%% TODO: Finish describing the verification part
+\begin{lstlisting}
+(* Step 1: Receive prepare req *)
+
+(* Ending condition *)
+Definition r_prepare_req_cond (res : option proposal) := res == None.
+
+(* Invariant relates the argument and the shape of the state *)
+Definition r_prepare_req_inv (e : nat) (pinit: proposal): cont (option proposal) :=
+  fun res i =>
+    if res is Some psal
+    then loc i = st :-> (e, APromised psal)
+    else loc i = st :-> (e, AInit).
+
+(* Loops until it receives a prepare req *)
+Program Definition receive_prepare_req_loop (e : nat):
+  DHT [a, W]
+  (fun i => loc i = st :-> (e, AInit),
+   fun res m => exists psal, (res = Some psal) /\
+       (loc m = st :-> (e, APromised psal)))
+  :=
+  Do _ (@while a W _ _ r_prepare_req_cond (r_prepare_req_inv e) _
+        (fun _ => Do _ (
+           r <-- tryrecv_prepare_req;
+           match r with
+           | Some (from, tg, body) => ret _ _ (Some body)
+           | None => ret _ _ None
+           end
+        )) None).
+Next Obligation. by apply: with_spec x. Defined.
+Next Obligation. by move:H; rewrite /r_prepare_req_inv (rely_loc' _ H0). Qed.
+Next Obligation.
+  apply:ghC=>i1 psal[/eqP->{H}/=E1]C1; apply: step.
+  apply: act_rule=>i2/=R1; split; first by case: (rely_coh R1).
+  case=>[[[from e']d i3 i4]|i3 i4]; last first.
+  - case=>S/=[]?; case; last by case=>?[?][?][?][?][?][].
+    case=>_ _ Z; subst i3=>R2; apply: ret_rule=>i5 R4/=.
+    by rewrite (rely_loc' _ R4) (rely_loc' _ R2)(rely_loc' _ R1).
+  case=>Sf[]C2[]=>[|[l'][mid][tms][from'][rt][pf][][E]Hin E2 Hw/=]; first by case.
+  case/andP=>/eqP Z G->[]Z1 Z2 Z3 R2; subst l' from' e' d.
+  move: rt pf (coh_s (w:=W) l (s:=i2) C2) Hin R2 E2 Hw G E; rewrite prEq/=.
+  move=>rt pf Cj' Hin R E2 Hw G E.
+  have D: rt = receive_prepare_req_trans _ _.
+  - move: Hin G; by do! [case=>/=; first by move=>->].
+  subst rt=>{G}.
+  have P1: valid (dstate (getS i2))
+    by apply: (@cohVl _ coh); case: (Cj')=>P1 P2 P3 P4; split=>//=; done.
+  have P2: valid i2 by apply: (cohS (proj2 (rely_coh R1))).
+  have P3: l \in dom i2 by rewrite -(cohD (proj2 (rely_coh R1)))/ddom gen_domPt inE/=.
+
+  apply: ret_rule=>//i5 R4.
+  - rewrite /r_prepare_req_inv; rewrite (rely_loc' _ R4) (rely_loc' _ R) locE//=.
+    rewrite /PaxosProtocol.r_step /=.
+    rewrite -(rely_loc' _ R1) in E1.
+    rewrite (getStK _ E1).
+    by rewrite /step_recv /mkLocal.
+Qed.
+Next Obligation.
+  move => i1/= E1.
+  apply: (gh_ex (g:=([::0; 0]))).
+  apply: call_rule => //r i2 [H1]H2 C2.
+  rewrite /r_prepare_req_cond/r_prepare_req_inv in H1 H2.
+    by case: r H1 H2 => //p _; exists p.
+Qed.
+\end{lstlisting}
