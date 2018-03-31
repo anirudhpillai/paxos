@@ -1,8 +1,22 @@
 \chapter{Design and Implementation}
+% – Describe the design of what you have created.
+% – Start with the application architecture, giving its overall structure
+% and the components that make up that structure.
+% – Give a description of the design of each of the the components that
+% make up the architecture.
+% – Include the database or storage representation.
+% – Provide implementation details as necessary.
+
+This chapter has been split into two parts. First is the `Modelling'
+section where look at the design of the adapted protocol, state transitions
+and inductive invariant for Paxos. We also look at the Python simulator
+that helped solidify these designs before implementing them in Disel.
+The latter part of this chapter explains how the adapted protocol was
+encoded in Disel.
 
 \section{Modelling}
 
-\subsection{The Protocol}
+\subsection{The Adapted Protocol}
 % TODO: (e.g., cite this paper: http://ilyasergey.net/papers/paxos-register-extended.pdf)
 For mechanising the proof of Paxos in Disel, we followed the approach highlighted
 in the Disel section of Chapter 2 by first writing and testing the code for
@@ -12,14 +26,14 @@ for the protocol which we will encode in Disel. Before coming up with these thin
 though, we decided to simplify the actual simple paxos protocol that we will prove.
 
 The goal of this simplification was to reduce the amount of things that we will need
-prove in Disel by actually focusing on the 'core' parts of the protocol which
-lead to consensus being achieved. The 'convenience' parts of the protocol, like
+prove in Disel by actually focusing on the `core' parts of the protocol which
+lead to consensus being achieved. The `convenience' parts of the protocol, like
 the sub phase of informing the learner, aren't necessary for consensus being
 achieved in the global state and can also be proved separately after we have
 finished proving the 'core' parts of the protocol.
 
-In order to adapt the protocol and focus on the 'core' parts, the first thing
-we did was to do away with the 'Learning the Chosen Value' phase of simple paxos.
+In order to adapt the protocol and focus on the `core' parts, the first thing
+we did was to do away with the `Learning the Chosen Value' phase of simple paxos.
 This is the phase where once an acceptor has accepted a proposal, it then informs
 a leaner by sending it an accepted request. We decided against proving this
 because we can use the inductive invariant to check the global state of the system.
@@ -40,7 +54,7 @@ accepted request.
 
 Additionally, we decided to remove some optimisation from the protocol.
 Optimisations are aspects of the protocol that improve its running time or
-resource consumption but improving upon the 'mundane' way of doing the same
+resource consumption but improving upon the `mundane' way of doing the same
 thing. Removing optimisations allowed us to simplify our proofs in Disel.
 
 Firstly, we decided that a proposer, if it fails while trying to achieve
@@ -62,7 +76,7 @@ quorum of acceptors.
 
 This adapated and simplified protocol allows us to focus on verifying the core
 logic (the part dealing with achieving consensus) of paxos. The
-optimisations and 'conveniece' that we removed can be verified separately after
+optimisations and `conveniece' that we removed can be verified separately after
 the core logic has been verified.
 
 
@@ -204,8 +218,8 @@ it will hold for any state $s'$ reachable from $s$.
 The crux of Paxos' correctness lies in the prepare phase where, before sending
 the accept request, the Proposer must first set the value of the proposal, that
 it wants to propose, to be the value of the highest numbered proposal it receives
-as a promise. This ensures that when consensus has been achieved on a value `v`,
-further rounds of the protocol also ensure that consensus will only be achieved on `v`.
+as a promise. This ensures that when consensus has been achieved on a value `v',
+further rounds of the protocol also ensure that consensus will only be achieved on `v'.
 
 We established two invariants \textbf{I1} and \textbf{I2} which together form an inductive
 invariant for our protocol that also proves its safety.
@@ -304,7 +318,6 @@ accept request message $\langle p_2, v_2 \rangle$ as $v_1$ is the value of the
 highest numbered proposal that it receives as a promise response.
 Thus, meeting our above requirement.
 
-\section{Simulator}
+\subsection{Simulator}
 
-
-\section{Verification}
+\section{Encoding the protocol in Disel}

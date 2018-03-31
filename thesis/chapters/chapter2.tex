@@ -498,9 +498,7 @@ capabilities to extract the OCaml code for executing the program. (Outlined in C
 % |
 % Prove Client
 % |
-% Implement and prove Protocol
-% |
-% Design and implement Inductive Invariant
+% Implement and prove Protocol & Design and implement Inductive Invariant
 
 \subsubsection{1. Adapt Protocol and Design State transition system}
 By adapting the protocol we try to focus on the 'core' parts of the protocol
@@ -553,17 +551,16 @@ the proof of our protocol. Finishing stage 4 completes the proof of the protocol
 while reaching stage 5 actually adds an inductive invariant that stregthens the
 proof of the protocol even further.
 
-\subsubsection{4. Implement and prove the adapted protocol}
-Having proved that our client follows the protocol, the next stage is for us
-to actually finish the implementation of our protocol and to prove it. Finishing
+\subsubsection{4. Encode the adapted protocol and the inductive invariant}
+Having proved that client follows the protocol, the next stage is
+to actually finish the implementation of the protocol and to prove it. Finishing
 stage 3, helped us be sure that the state transitions we have are enough for
-realising the 'core' part of the protocol and that action of the client is proved.
+realising the `core' part of the protocol and that action of the client is proved.
 Now we need to prove the protocol itself.
 
 Finishing this stage meant that we have finished the proof of the protocol,
 although we can only be sure that ...
 
-\subsubsection{5. Design and implement Inductive Invariant}
 In the proof of Paxos, we were only able to finish still stage 4. We designed
 the inductive invariant but ran out of time to prove it.
 

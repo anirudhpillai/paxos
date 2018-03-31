@@ -1,17 +1,18 @@
 \chapter{Client Application}
 As outlined in chapter 2, our approach to using Disel involved first coding
 the protocol and the client application, and then going on write the proofs.
-Having the client application working before writing the proofs gave us
-confidence that the design of our adapted protocol worked and could be used
+Having the client application working before writing the proofs showed
+that the design of the adapted protocol worked and could be used
 to achieve consensus.
 
-In this chapter we look at how we implemented a simple client application
-that uses the proof of our adapted protocol to create an implementation of nodes
-that achieve consensus on a value. This chapter first looks at how the client
+In this chapter we look at the implementation of a simple client application
+that uses the proof of the adapted protocol to create an application where
+a set of nodes achieve consensus on a value. The chapter first looks at how the client
 application was designed and encoded in Disel. After which we look into how
-Disel's \texttt{shims} runtime was used to extract the OCaml code for the client.
-Finally, we outline how we extended the client application by writing a
-wrapper around it.
+Disel's \texttt{shims} runtime was used to extract the OCaml code for the
+runnable client application. Then we outline how to extended the client
+application by writing a wrapper around it. Finally, we look at how the client
+application was proved in Disel.
 
 \section{Modelling}
 % Give a textual description with a lot of intuition about what kind of client
@@ -112,7 +113,8 @@ proposers (node 2) on running this script. Nodes 3, 4 and 5 are acceptors while
 node 1 is the other proposer proposing value 1.
 
 \begin{lstlisting}
-initial state is: [0 |-> {dstate = [1 |-> [1 |-> <heap>], 3 |-> [1 |-> <heap>], 4 |-> [1 |-> <heap>], 5 |-> [1 |-> <heap>]]; dsoup = <>}]
+initial state is: [0 |-> {dstate = [1 |-> [1 |-> <heap>], 3 |-> [1 |-> <heap>],
+    4 |-> [1 |-> <heap>], 5 |-> [1 |-> <heap>]]; dsoup = <>}]
 World is [0 |-> <protocol with label 0>]
 sending msg in protocol 0 with tag = 0, contents = [2; 2] to 3
 World is [0 |-> <protocol with label 0>]
