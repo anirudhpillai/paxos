@@ -59,26 +59,27 @@ The protocol accounts for the failures and generally specifies the maximum numbe
 failures and the types of failures it can handle before it stops functioning correctly.
 
 \subsection{State Machine Replication}
-%% TODO: Reference https://www.cs.cornell.edu/fbs/publications/SMSurvey.pdf
+%% Reference https://www.cs.cornell.edu/fbs/publications/SMSurvey.pdf
 
 For a client server model, the easiest way to implement it is to use one single server
 which handles all the client request. Obviously this isn't the most robust solution
 as if the single server fails, so does your service. To overcome the problem you
 use a collection of servers each of which is a replica of the original single server and
-ensure that each of these 'replicas' fails independantly, without effecting the other replicas.
+ensure that each of these `replicas' fails independantly, without effecting the other replicas.
 This adds more fault tolerance.
 
 State Machine Replication is method for creating a fault tolerant distributed system
 by replicating servers and using protocols to coordinate the interactions of these
-replicated servers with the client.
+replicated servers with the client. Fred B. \cite{1} points out how to use
+state machine replication to implement fault tolerant services.
 
 A State Machine $M$ can be defined as $M = \langle q_0, Q, I, O, \delta, \gamma \rangle$ where \\
 $q_0$ is the starting state \\
-$Q$ is the set of all possible states.
-$I$ is set of all valid inputs
-$O$ is the set of all valide outputs
-$\delta$ is the state transition function, $\delta : I x Q -> Q$
-$\gamma$ is the output function, $\gamma : I x Q -> O$
+$Q$ is the set of all possible states. \\
+$I$ is set of all valid inputs \\
+$O$ is the set of all valid outputs \\
+$\delta$ is the state transition function, $\delta : I \times Q \rightarrow Q$ \\
+$\gamma$ is the output function, $\gamma : I \times Q \rightarrow O$
 
 The state machine begins in the start state and transitions to other states and
 produces outputs when it receives the inputs. The transition and output are found
@@ -97,15 +98,30 @@ state machine and providing all of them with the input from the client.
 As long as one of the replicas does not crash, while resolving the request,
 we can successfully return a response to the client.
 
-%% TODO: Cover Byzantine Faults
+\subsection{Byzantine Fault Tolerance}
+Byzantine fault tolerance is the most general form of fault tolerance in which
+any arbitary form of failure should be defended against. This failure might not
+just be a node crashing or but could also be some node producing inconsistent
+output or having corrupted state. A node with a Byzantine fault might also behave
+`maliciously', for example, by sending different responses for the same question to
+different nodes, or it might present itself as failed to some nodes and as functioning
+to others. It might do this to prevent the distributed algorithm from functioning
+correctly.
+
+The term comes from the `Byzantine Generals Problem' by Laport et al \cite{3}
+in which a set of nodes must decide on a course of action, but at the same time
+some of the nodes are `malfunctioning' and give `conflicting information to
+different parts of the system'.
 
 \subsection{Consensus Protocols}
 For handling faults in your distributed system you need to have replication.
 This leads to the problem of making all these replicas agree with each other
 to keep them consistent. Consensus protocols try to solve this problem.
 
+\begin{quote}
 Consensus protocols are the family of distibuted systems protocols which aim to
 make a distributed network of processes agree on one result.
+\end{quote}
 
 These protocols are of interest because of their numerous real world applications.
 Let us take the example of a distributed database, which is a critical part of almost
@@ -114,23 +130,22 @@ over a network of computers and everytime you use the database you aren't guaran
 to be served by the same computer.
 
 Suppose you add a file to the database. This action is performed by the processor that
-was serving you 'add' request. Later when you want to retrieve the file from the database
-you might be served by a different computer that did not perform the 'add' request. Inorder
+was handling your `add' request. Later when you want to retrieve the file from the database
+you might be served by a different computer that did not perform the `add' request. Inorder
 for the new computer to know that the file exists in the database, you will need to use a
 consensus protocol which helps all the computers in the network (which handle user
 requests) agree upon the result that the file has been added to the database.
 
-Popular consensus protocols include PageRank used by Google and the Blockchain
-consensus protocol. George and Ilya verified a subset of the protocol in Coq in
-their Toychain paper.
-%% TODO: references
+A popular consensus protocol is the blockchain consensus protocol which powers Bitcoin.
+George P. and Ilya S. \cite{5} have verified a subset of this protocol in Coq.
 
 
 \section{Paxos}
 Having understood the the main concepts behind distributed system protocols, we can
 now finally get to the protocol at the heart of this project. Paxos is a family of
 asynchronous, fault tolerant, consensus protocol which achieves consensus in a network
-of unrealiable processes as long as a majority of them don't fail.
+of unrealiable processes as long as a majority of them don't fail. Paxos was
+outlined in Lamport's 1998 paper, `Part Time Parliament' \cite{4}.
 
 Paxos is used for state machine replication. Once you have multiple replicas
 servicing client requests, how do you makes sure that all of these replicas agree
@@ -150,13 +165,13 @@ and the environment, in order for the protocol to function correctly.
     to the fault tolerant nature of paxos. Also, we assume that Byzantine faults don't occur.
     This means that all processors actually work together to try to achieve consensus on a value.
     There are variants of paxos which can also handle Byzantine failure buy not simple paxos.
-    (This can be linked to the 'PBFT' paper which states that any algorithm handling
+    (This can be linked to the 'Practical Byzantine Fault Tolerance' paper, by Castro et al \cite{2},
+    which states that any algorithm handling
     Byzantine faults must have three phases. Simple paxos only has two phases.)
-    %% TODO: References
 \end{itemize}
 
 As for fault tolerance of paxos, in order to handle a failure of upto $f$ processors,
-we need to have a minimum $2f+1$ processors participating in the algorithm. This
+we need to have a minimum $2f + 1$ processors participating in the algorithm. This
 means paxos functions correctly as long as a majority of the processors in the
 network do not fail. We will see shortly why just a majority needs to function
 correctly.
@@ -191,8 +206,8 @@ You can think of a proposal as just a tuple $\langle n, v \rangle$.
 $n$ is just a natural number associated with a proposal which makes
 it easy to keep track of all the different proposals.
 
-A $quorum$ of acceptors is a subset of the set of all acceptors with length greater
-than $N/2$ where $N$ is the length of the set of acceptors. A $quorum$ is just
+A \texttt{quorum} of acceptors is a subset of the set of all acceptors with length greater
+than $N / 2$ where $N$ is the length of the set of acceptors. A \texttt{quorum} is just
 a set denoting a majority of all the available acceptors.
 
 \begin{quote}
@@ -231,11 +246,11 @@ be subdivided into parts a, b.
 \begin{itemize}
   \item \textbf{Phase 1a: Prepare Request.}
     A proposer sends a proposal
-    $\langle n, v \rangle$ to each acceptor in any randomly chosen $quorum$ of acceptors.
-    This first message that the proposer sends out is called a $prepare request$.
+    $\langle n, v \rangle$ to each acceptor in any randomly chosen \texttt{quorum} of acceptors.
+    This first message that the proposer sends out is called a \texttt{prepare request}.
     As it the proposer tries to 'prepare' the acceptors to 'accept' a value in the future.
   \item \textbf{Phase 1b: Promise Response.}
-    An acceptor on receiving a prepare request, responds with a $promise response$,
+    An acceptor on receiving a prepare request, responds with a \texttt{promise response},
     if and only if the acceptor has not already sent a promise response with
     a proposal containing a proposal number $n'$ where $n' > n$.
 
@@ -246,7 +261,7 @@ be subdivided into parts a, b.
     Thus, if an incoming prepare request has proposal number less than what the
     acceptor has already promised earlier, then the acceptor can ignore this
     prepare request by not responding to it. Although, for speeding up the
-    protocol, the acceptor can send out a $nack response$ which tells the
+    protocol, the acceptor can send out a \texttt{nack response} which tells the
     proposer to stop trying to achieve consensus with this proposal.
 
     If the acceptor has not sent any promise response before, then the body of
@@ -255,7 +270,7 @@ be subdivided into parts a, b.
     message.
   \item \textbf{Phase 2b: Accept Request.}
     If the proposer successfully receives promise responses from a majority of
-    acceptors, then it can send out an $accept request$. A accept request is
+    acceptors, then it can send out an \texttt{accept request}. A accept request is
     a message containing a proposal which tells an acceptor to accept this
     proposal if it can.
 
@@ -274,7 +289,7 @@ be subdivided into parts a, b.
 \end{itemize}
 
 %% Not sure if algorithm implementation is required
-%% can link to simulator in the appendix
+%% can link to simulator
 
 \vspace{-4mm}
 \subsection{Informing learner}
