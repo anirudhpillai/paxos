@@ -311,7 +311,7 @@ Paxos also ensures that before sending the accept request for
 $p_2, v_2$, the proposer must select the value of the highest numbered
 proposals which it receives in its promises.
 
-So the Acceptor $a$ will send $\langle p_1, v_1 \rangle$ in its promise message to
+So the acceptor $a$ will send $\langle p_1, v_1 \rangle$ in its promise message to
 the proposer. As $\langle p_2, v_2 \rangle$ is the only proposal number which has
 proposal number greater than $p$, the proposer must set $v_2 = v_1$ in its
 accept request message $\langle p_2, v_2 \rangle$ as $v_1$ is the value of the
@@ -319,5 +319,136 @@ highest numbered proposal that it receives as a promise response.
 Thus, meeting our above requirement.
 
 \subsection{Simulator}
+%% Talk about how it modeled how Disel works
+%% and how it followed our adapted protocol
+The next step after designing the adapted protocol was to
+implemented a simulator for it in Python. The simulator was modelled according
+to Disel, in that each process has send and receive transitions and that each
+node follows a state transition system. In order to test the protocol, we only
+used the state transitions we designed in the adapted protocol. The type
+of messages that each node sends or receives and the data it holds
+were all taken from the state transition system.
+
+In the code listing below you can see the main body that an acceptor node
+runs in the simulator. It first checks the type of message and then performs
+an action depending on its current state. For example, when it receives a
+\texttt{AcceptRequestMessage}, if it is in the \texttt{AInit} state then it
+accepts the proposal, otherwise if it is in the \texttt{APromised} state, it
+first the proposal number of the incoming message (proposal)
+and accepts the proposal only if the number is greater than the number
+the acceptor has promised already.
+
+\begin{lstlisting}[language=Python]
+class Acceptor(Process):
+    ...
+    def body(self):
+        while True:
+            msg = self.get_next_msg()
+            p_no, p_val = msg.proposal
+
+            if isinstance(msg, PrepareRequestMessage):
+                if self.state[0] == "AInit":
+                    self.state = ("APromised", msg.proposal)
+                    self.send_promise_resp(p_no)
+                elif self.state[0] == "APromised":
+                    promised_no, _ = self.state[1]
+                    if p_val < promised_no:
+                        self.send_nack_resp(p_no)
+                    else:
+                        self.state = ("APromised", msg.proposal)
+                        self.send_promise_resp(p_no)
+                else:
+                    self.send_nack_resp(p_no)
+            elif isinstance(msg, AcceptRequestMessage):
+                if self.state[0] == "AInit":
+                    self.state = ("AAccepted", msg.proposal)
+                else:
+                    promised_no, _ = self.state[1]
+                    if p_val >= promised_no:
+                        self.state = ("AAccepted", msg.proposal)
+      ...
+\end{lstlisting}
+
+Running the simulator and watching it achieve consensus proved that the design
+of the adapted protocol functioned correctly. Implementing the simulator before
+encoding the protocol in Disel, not only helped solidify the understanding
+of the adapted protocol but also helped catch errors in the protocol design
+early on. This is because, in Disel, we would first have to encode the
+protocol then implement the client application and then see whether the it
+functions correctly. Additionally, the simulator can also be used to test the
+designed inductive invariant. One can write a function that queries the state of
+each node and prints out a boolean indicating when the inductive invariant is
+preserved or raise an error otherwise.
 
 \section{Encoding the protocol in Disel}
+Having designed the adpated protocol and tested it on a simulator, the next
+step was to actually encode it in Disel. The most important part was to encode
+the state transitions of the protocol. In the encoding, we define an inductive
+type, \texttt{RoleState} that stores all the states a node can be in and the
+data it can hold.
+
+\begin{lstlisting}
+(* States of the nodes *)
+Inductive RoleState :=
+(* Proposer States *)
+(* Initialised with a proposal (p_no * p_val) *)
+| PInit of proposal
+(* Sent prepare message to some Acceptors at a current stage *)
+(* seq nid holds nodes which were sent the message *)
+| PSentPrep of seq nid & proposal
+(* Received promises/NACKs from Acceptors *)
+| PWaitPrepResp of promises & proposal
+(* Send AcceptRequest *)
+| PSentAccReq of seq nid & proposal
+(* Finished executing after sending AccReq or not receiving majority*)
+| PAbort
+(* Acceptor states *)
+| AInit
+(* Holds the highest number promised in the proposal *)
+(* Storing a proposal and not just a nat as this makes it easier to catch the payload
+later on in the transitions *)
+| APromised of proposal
+(* Holds the highest number proposal accepted *)
+| AAccepted of proposal.
+\end{lstlisting}
+
+The \texttt{step} functions were defined next. These functions dictate how the state
+of a node changes on sending or receiving a message. Below is a code listing
+from the \texttt{step\_recv} function which handles the change in state on
+receiving a message. \texttt{s} is the current state of the nodes,
+\texttt{mbody} is the message that is received and \texttt{mtag} is the tag
+of the received message. When the node receives a message in the \texttt{APromised}
+state, it first checks whether it is an prepare request or an accept request.
+It then checks whether the number of the proposal is greater than the one it has
+already promised. If it is greater, then the node transitions to \texttt{APromised},
+but holding a new proposal, or to the \texttt{AAccepted} state depending on the
+type of the incoming message.
+
+\begin{lstlisting}
+(* Changes in the Node state triggered upon receive *)
+Definition step_recv (s : StateT) (from : nid) (mtag : ttag) (mbody : payload):
+  StateT :=
+  let: (e, rs) := s in
+  let: recv_p_no := head 0 mbody in
+  let: recv_p_val := last 0 mbody in
+  match rs with
+  ...
+  | APromised p' =>
+      let: curr_p_no := head 0 p' in
+      let: curr_p_val := last 0 p' in
+      if mtag == prepare_req
+      then if recv_p_no > curr_p_no (* If received higher number *)
+           (* Update promised number by storing new proposal *)
+           then (e, APromised mbody)
+           else (e, APromised p')
+      else (* It's an accept request *)
+           if recv_p_no > curr_p_no (* If received higher number *)
+           then (e, AAccepted mbody) (* Accept the proposal *)
+           else (e, APromised p') (* we'll send nack *)
+  ...
+  | _ => s
+  end.
+\end{lstlisting}
+
+The complete encoding of the adapted protocol can be found in the
+\texttt{PaxosProtocol.v} file.
