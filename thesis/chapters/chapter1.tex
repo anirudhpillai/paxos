@@ -1,11 +1,31 @@
 \chapter{Introduction}
 
 \section{The Problem}
-This project aims to implement a library of reusable verified distributed components,
-based on the classical family of fault-tolerant asynchronous Paxos-like consensus protocol.
-The project will use Disel, a framework for compositional verification of distributed
-protocols built on top of the Coq proof assistant, to verify correctness of the
-implemented components.
+Distributed systems are ubiquitous in the morder world yet they designing
+correctly functioning systems is still very hard. Furthermore such
+systems are composed of various smaller components which in themself are
+hard to implement correctly. There has been recent work in developing
+frameworks to verify the implemention of the `smaller' sub-components
+but we there still remains the problem of checking whether these smaller
+components, when combined together, achieve the desired goal.
+
+Disel is a framework for compositional verification of distributed
+protocols built on top of the Coq proof assistant. It allows one to verify
+the correctness of the implemented components and also to check whether
+the verfied components function correctly when combined together.
+
+Another fundamental problem in the field of distributed computing is to make
+a set of process achieve consensus on something, for examples, the occurence
+of an event or the decision to take some action. The set of distributed
+computing protocols which tries to solve this problem are termed as
+consensus protocols. One of these protocols is the Paxos consensus protocol
+which has numerous variants according to the constraints imposed on the
+set of processes.
+
+This project involves using Disel to mechanise the proof of the Paxos consensus protocol.
+We will also be using the code extraction capabilities of Disel to
+write a client application that uses the verified protocol to make set of
+distributed processes achieve consensus.
 
 \section{Aims and Goals}
 I have highlighted the aims and goals separately. The aims are what I want to
@@ -15,8 +35,20 @@ project tries to achieve.
 \subsection{Aims}
 \begin{enumerate}
 \itemsep0em
-  \item Learn about distributed system protocols
-  \item Contribute to open source software
+  \item Learn about distributed computing. I wanted to learn how to reason about
+    and implement distrubuted programs and the algorithms running on top of them.
+    Working on verifying a popular distributed protocol, will teach me about all
+    the concepts needed to understand such systems. While actually implementing
+    applications using the protocol will teach me how to apply the concepts to
+    the real world.
+  \item Contribute to open source software. Disel is an open source framework
+    and working on that will enrich my open source contributions and improve
+    my knowledge of the workflow.
+  \item Learn about formal verification. This was based partly on my interest in
+    the various courses on logic. Using Coq for verification would enable me
+    to apply my theoretical knowledge and use it for
+    implementing and verifying a popular distributed system protocol.
+
 \end{enumerate}
 
 \vspace{-5mm}
@@ -35,9 +67,40 @@ project tries to achieve.
 
 \vspace{-4mm}
 \section{Project Overview}
-% Give an overview of how you carried out the project (e.g., an iterative
-% approach).
+During the course of the
+project we came up with a workflow for using Disel to mechanise proofs of protocols.
+This workflow is outlined in detail in the Disel section of chapter 2. The main
+stages in the project were as follows:
+\begin{itemize}
+\itemsep0em
+  \item First stage was to read about and understand the various concepts related
+    to distibuted computing and more importantly to understand the workings of
+    Paxos-like consensus protocols. Implementing the Python simulation of the
+    algorithm was very helpful in understanding the roles of each of the nodes
+    in the protocol.
 
+  \item The next stage was to design an adapted protocol that we would prove and
+    to design the state transition diagrams and inductive invariant of that protocol.
+    We also designed the client application that would use the protocol and created
+    a Python simulation of it to ensure that the designed functioned correctly.
+
+  \item The final stage was actually mechanising the proofs in Disel. We first
+    encoded the implementation of the client application and the protocol. Once,
+    the client application functioned correctly, we moved on to writing proofs
+    for it and the encoded protocol.
+\end{itemize}
+
+\vspace{-4mm}
 \section{Report Overview}
 % A brief overview of the rest of the chapters in the report (a guide to
 % the reader of the overall structure of the report).
+In the following chapter we look at various concepts relating to distributed
+computing and understand the two main components of this project, the Paxos
+protocol and the Disel framework. Then, with that background information,
+we look at how we adapted the design of the Paxos protocol and designed
+safety invariants to detect whether it is functioning correctly. Later,
+we move on to actually encoding the protocol in Disel and creating a client
+application that uses the verified protocol.
+Finally, we evaluate the results of the project and the
+experience of using the Disel framework and look at areas for future
+development.
