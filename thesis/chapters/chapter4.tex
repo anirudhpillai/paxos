@@ -1,4 +1,4 @@
-\chapter{Design and Implementation}
+\chapter{Protocol Design and Encoding}
 % – Describe the design of what you have created.
 % – Start with the application architecture, giving its overall structure
 % and the components that make up that structure.
@@ -10,14 +10,14 @@
 This chapter has been split into two parts. First is the `Modelling'
 section where look at the design of the adapted protocol, state transitions
 and inductive invariant for Paxos. We also look at the Python simulator
-that helped solidify these designs before implementing them in Disel.
+that helped solidify these designs before encoding them in Disel.
 The latter part of this chapter explains how the adapted protocol was
 encoded in Disel.
 
 \section{Modelling}
 
 \subsection{The Adapted Protocol}
-% TODO: (e.g., cite this paper: http://ilyasergey.net/papers/paxos-register-extended.pdf)
+% (e.g., cite this paper: http://ilyasergey.net/papers/paxos-register-extended.pdf)
 For mechanising the proof of Paxos in Disel, we followed the approach highlighted
 in the Disel section of Chapter 2 by first writing and testing the code for
 the protocol before writing the proofs. Applying this approach meant
@@ -30,7 +30,10 @@ prove in Disel by actually focusing on the `core' parts of the protocol which
 lead to consensus being achieved. The `convenience' parts of the protocol, like
 the sub phase of informing the learner, aren't necessary for consensus being
 achieved in the global state and can also be proved separately after we have
-finished proving the 'core' parts of the protocol.
+finished proving the `core' parts of the protocol. Garcia-Perez et al \cite{6}
+have also showed how the optimizations of a protocol can be verified separately
+from the `core' protocol. In their paper, they produce a verified implementation
+of multi paxos using their verified implementation of simple paxos.
 
 In order to adapt the protocol and focus on the `core' parts, the first thing
 we did was to do away with the `Learning the Chosen Value' phase of simple paxos.

@@ -10,9 +10,7 @@ to solve the problem.
 A distributed system is a model in which processes running on running different
 computers, which are connected together in a network, exchange messages to coordinate
 their action, often resulting in the user thinking of the entire system as one single
-unified computer.
-
-A computer in the distibuted system is also alternatively referred to as a
+unified computer. A computer in the distibuted system is also alternatively referred to as a
 processor or a node in the system. Each node in a distributed systems has its
 own memory.
 
@@ -89,8 +87,8 @@ copies of the machine when given the same input, pass through the same order of 
 and produce the same output in the same order.
 
 The method of modelling a distributed system protocol as state transition system
-is very common and is a critical component of this project as we will see soon when
-we need to encode our protocol in Disel.
+was established by Lamport \cite{10} and is very common. It is a critical component
+of this project as we will see soon when we need to encode our protocol in Disel.
 
 State machine replication involves modelling our single server, from the client
 server model, and using multiple copies (replicas) of the same deterministic
@@ -137,7 +135,9 @@ consensus protocol which helps all the computers in the network (which handle us
 requests) agree upon the result that the file has been added to the database.
 
 A popular consensus protocol is the blockchain consensus protocol which powers Bitcoin.
-George P. and Ilya S. \cite{5} have verified a subset of this protocol in Coq.
+George P. and Ilya S. \cite{5} have verified a subset of this protocol in Coq. Other
+examples of consensus protocols are Raft \cite{12}, Stellar Consensus Protocol \cite{13}
+and Paxos \cite{14}, which we will now look at.
 
 
 \section{Paxos}
@@ -150,7 +150,9 @@ outlined in Lamport's 1998 paper, `Part Time Parliament' \cite{4}.
 Paxos is used for state machine replication. Once you have multiple replicas
 servicing client requests, how do you makes sure that all of these replicas agree
 on what action to take? The solution is simply to use a consensus protocol like
-Paxos to make all replicas agree on something.
+Paxos to make all replicas agree on something. Paxos is heavily used in building
+software. It has been used at Google to build a fault tolerate database \cite{11}
+and the Chubby \cite{12} lock service.
 
 Paxos has many variants but the one we will focus on is the one we actually prove
 in Disel, single decree Paxos, also know as simple paxos. Simple Paxos is an algorithm
@@ -342,19 +344,25 @@ Disel.
 
 \section{Disel}
 %% TODO; Improve intro
-Disel is a verification framework, built on top of the Coq theorem prover,
+Disel \cite{9} is a verification framework, built on top of the Coq theorem prover,
 that enables one to prove the safety properties of a distributed protocol by
 breaking down the protocol into its state space invariants and its atomic properties.
+The unique aspect of Disel is that it also allows one to combine these separate
+verified protocols to create a complete verified system. Additionally, the
+code extraction properties of Disel enables one to extract the verified runnable
+OCaml code for the protocols which can be combined with an shim which supplies
+the implementation of the various primite operations like sending or receiving
+a message.
 
 \subsection{Protocol Encoding}
 We will now look at how Disel requires the state space of a protocol to be encoded in it.
 
 %% TODO: copy image from Disel paper
 %% TODO: cite Disel paper
-"Each global system state $s$ is a finite partial mapping from protocol labels
+`Each global system state $s$ is a finite partial mapping from protocol labels
 $l \in \mathrm{\texttt{Lab}}$ to statelets. Each statelet represents a
-protocol-specific component, consisting of a “message soup” MS and a per-node
-local state (\texttt{DistLocState})."
+protocol-specific component, consisting of a `message soup' MS and a per-node
+local state (\texttt{DistLocState}).'
 
 %% TODO explain what a state is
 
@@ -581,3 +589,12 @@ the inductive invariant but ran out of time to prove it.
 
 
 \section{Related Work}
+People have attempted to create software for verfying the correctness of distributed
+systems. IronFleet \cite{15}, developed at Microsoft Research, can prove not just
+safety but also liveness properties of distributed systems and has been used
+to verify a `complex implementation of a Paxos-based replicated state machine
+library'. Verdi \cite{16} is another framework built on top of Coq and has been used
+to develop the `proof of linearizability of the Raft state machine replication
+algorithm'. Ivy \cite{19} is another tool which makes it much easier to find and
+prove inductive invariants for the system. Other similar tools are PSync \cite{17}
+and EventML \cite{18}.
