@@ -313,37 +313,7 @@ have agreed on a value. There are various ways to do this.
     reliability but also increases the number of messages exchanged.
 \end{enumerate}
 
-
-\subsection{Inductive Invariant}
-%% TODO: or more intuition, check Chapter 5 of http://adam.chlipala.net/frap/frap_book.pdf
-A invariant in a program is a property of a program that always holds true,
-from the start through to the end of execution of the program. An invariant can be for something
-more specific like a function or even a loop. The only requirement is the property
-described by the invariant should always hold before, during and after execution
-of the part of that code.
-
-The problem with using just an invariant like $x > 2$ is that, you may assume
-that the invariant holds before the execution of the program, but you still
-do not have a guarantee that this invariant will hold during and after the
-execution of the program, i.e. in any state of the program.
-
-Therefore, we need to make our invariants $inductive$. An inductive invariant
-of a program, is an invariant which if it holds in a particular state $s$ of the
-program, it is guaranteed to hold in all states of the program reachable from $s$.
-Thus, having an inductive invariant that holds in the start state of a program
-is much more useful, as we can be sure that the invariant will continue to
-hold throughout and after the execution of the program.
-
-This means that once you establish an inductive invariant from the given invariants
-of a protocol and a starting state for the protocol in which the invariant holds,
-in order to show that the protocol maintains the invariant, you only need to
-prove the inductive invariant maintains the induction property over any possible state
-transition in the protocol. This is exactly how you use an inductive invariant in
-Disel.
-
-
 \section{Disel}
-%% TODO; Improve intro
 Disel \cite{9} is a verification framework, built on top of the Coq theorem prover,
 that enables one to prove the safety properties of a distributed protocol by
 breaking down the protocol into its state space invariants and its atomic properties.
@@ -482,110 +452,33 @@ Program Definition proposer_round (psal: proposal):
 Once this implementation has been finished in Disel we can use Disel's extraction
 capabilities to extract the OCaml code for executing the program. (Outlined in Chapter 5)
 
+\subsection{Inductive Invariant}
+%% TODO: Improve linking
+%% TODO: or more intuition, check Chapter 5 of http://adam.chlipala.net/frap/frap_book.pdf
+A invariant in a program is a property of a program that always holds true,
+from the start through to the end of execution of the program. An invariant can be for something
+more specific like a function or even a loop. The only requirement is the property
+described by the invariant should always hold before, during and after execution
+of the part of that code.
 
-\subsection{Approach to Mechanising Proofs in Disel}
-\begin{figure}
-\centering
-\includegraphics[width=0.2\textwidth]{figures/disel_workflow.png}
-\caption{Disel Workflow
-\label{fig:myInlineFigure}}
-\end{figure}
+The problem with using just an invariant like $x > 2$ is that, you may assume
+that the invariant holds before the execution of the program, but you still
+do not have a guarantee that this invariant will hold during and after the
+execution of the program, i.e. in any state of the program.
 
-% (1) Write code before proofs and run/test it;
-%         (2) Prove that the code follows the protocol;
-%         -----
-%         (3) Write the protocol and prove invariants;
-%
-%
-% You might want to have a diagram for this…
-%
-% Take a look at this paper (without going into details):
-%
-% https://www2.eecs.berkeley.edu/Pubs/TechRpts/2017/EECS-2017-163.pdf
-%
-% You might want to make a point that even without verifying inductive invariants, we already can get relatively strong correctness properties just by verifying (1)-(2).
-%
-% (1)-(2) is also sort of delivered by this work: https://eb.host.cs.st-andrews.ac.uk/writings/tdd-conc.pdf
-%
-% 1. I suggest you first
-%   give a textual description with a lot of intuition about what kind of client
-%   we are interested in and what properties it can observe that are guaranteed by the consensus.
-% 2. Then you specify this property formally and sketch its proof.
-%
-% The client application does only need to have a couple of RPC-like procedures.
-% It doesn't have to know about the entire protocol.
-%
-% Adapt Protocol and Design State transition system (iterate)
-% | |
-% Design and implement the Client Application (iterate)
-% |
-% Prove Client
-% |
-% Implement and prove Protocol & Design and implement Inductive Invariant
+Therefore, we need to make our invariants $inductive$. An inductive invariant
+of a program, is an invariant which if it holds in a particular state $s$ of the
+program, it is guaranteed to hold in all states of the program reachable from $s$.
+Thus, having an inductive invariant that holds in the start state of a program
+is much more useful, as we can be sure that the invariant will continue to
+hold throughout and after the execution of the program.
 
-\subsubsection{1. Adapt Protocol and Design State transition system}
-By adapting the protocol we try to focus on the 'core' parts of the protocol
-and to do away with the 'conveniece' parts. For Paxos, this was focusing on the
-part of the protocol that deals with achieving consensus and not looking at the
-part where the learner is informed of the decision.
-
-We also need to design state transition systems for the nodes that participate
-in the protocol. This makes it easier for us to encode the protocol in Disel as
-we already know which send and receive transitions we will need from each state
-and thus can easily code the transition wrappers.
-
-In chapter 4, we look go into the details of how we tackled this stage on our way
-to mechanising the proof of Paxos.
-
-\subsubsection{2. Code the client application}
-Secondly, we need to think of a client application that uses the implemented protocol.
-We need to design and implement a client that will demonstrate the properties of the
-protocol that we want to prove. In case of Paxos, we designed a client
-where nodes try to acheive consensus on one of the proposals that the proposer
-is initialised with. This enabled us to see in action the stages of the protocol
-that lead to consensus being achieved.
-
-While using Disel, we often had to cycle between stage 1 and stage 2.
-This is because while implementing the client, you realise things like, you are
-missing one state for a node that is required in order for the protocol to progress.
-While writing the client for Paxos, we realised that we were missing the \texttt{PAbort}
-state for the proposer, which was necessary to signify when a proposer stops
-participating in the protocol.
-
-The process of cycling between stages 1 and 2 allow us to solidify our adapted
-protocol. Doing this at an early stage (before starting the proofs)
-also has the advantage of us not having to rewrite a lot of code that will also
-break all the proofs relating to the change.
-
-Additionally, implementing the client also helps us identify unnecessary stages
-and transitions in the adapted protocol which were not needed to implement the
-client. Reducing the number of states and transitions vastly reduces the amount
-of things you will need to prove in the later stages.
-
-\subsubsection{3. Prove the client}
-The next stage involves proving that the code for the client actually follows
-the adapted protocol. Thus, finishing the proofs in this stage gives us
-confidence that our adapted protocol can actually be used to fullfill the role
-which our client performs. In case of Paxos, this helped us realise that our
-adapted protocol can be used to achieve consensus among the acceptors.
-
-From this stage onwards, as we move to stages 4 and 5 we end up strengthening
-the proof of our protocol. Finishing stage 4 completes the proof of the protocol
-while reaching stage 5 actually adds an inductive invariant that stregthens the
-proof of the protocol even further.
-
-\subsubsection{4. Encode the adapted protocol and the inductive invariant}
-Having proved that client follows the protocol, the next stage is
-to actually finish the implementation of the protocol and to prove it. Finishing
-stage 3, helped us be sure that the state transitions we have are enough for
-realising the `core' part of the protocol and that action of the client is proved.
-Now we need to prove the protocol itself.
-
-Finishing this stage meant that we have finished the proof of the protocol,
-although we can only be sure that ...
-
-In the proof of Paxos, we were only able to finish still stage 4. We designed
-the inductive invariant but ran out of time to prove it.
+This means that once you establish an inductive invariant from the given invariants
+of a protocol and a starting state for the protocol in which the invariant holds,
+in order to show that the protocol maintains the invariant, you only need to
+prove the inductive invariant maintains the induction property over any possible state
+transition in the protocol. This is exactly how you use an inductive invariant in
+Disel.
 
 
 \section{Related Work}

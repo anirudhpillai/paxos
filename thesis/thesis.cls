@@ -110,8 +110,8 @@
 \RequirePackage{titling}
 
 
-% % Front matter.
-\setcounter{tocdepth}{1}
+%% Front matter.
+\setcounter{tocdepth}{2} %% changing to show subsections as well
 \usepackage[titles]{tocloft}
 \usepackage[titletoc]{appendix}
 \renewcommand{\cftsecleader}{\cftdotfill{\cftdotsep}}

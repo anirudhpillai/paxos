@@ -20,7 +20,117 @@ implemented components.
 \end{enumerate}
 
 \vspace{-5mm}
-\section{Analysis}
+\section{Analysis: Approach to Mechanising Proofs in Disel}
+Having decided on the requirements we came up with a workflow to
+mechanise the proof in Disel.
+
+\begin{figure}
+\centering
+\includegraphics[width=0.2\textwidth]{figures/disel_workflow.png}
+\caption{Disel Workflow
+\label{fig:myInlineFigure}}
+\end{figure}
+
+% (1) Write code before proofs and run/test it;
+%         (2) Prove that the code follows the protocol;
+%         -----
+%         (3) Write the protocol and prove invariants;
+%
+%
+% You might want to have a diagram for this…
+%
+% Take a look at this paper (without going into details):
+%
+% https://www2.eecs.berkeley.edu/Pubs/TechRpts/2017/EECS-2017-163.pdf
+%
+% You might want to make a point that even without verifying inductive invariants, we already can get relatively strong correctness properties just by verifying (1)-(2).
+%
+% (1)-(2) is also sort of delivered by this work: https://eb.host.cs.st-andrews.ac.uk/writings/tdd-conc.pdf
+%
+% 1. I suggest you first
+%   give a textual description with a lot of intuition about what kind of client
+%   we are interested in and what properties it can observe that are guaranteed by the consensus.
+% 2. Then you specify this property formally and sketch its proof.
+%
+% The client application does only need to have a couple of RPC-like procedures.
+% It doesn't have to know about the entire protocol.
+%
+% Adapt Protocol and Design State transition system (iterate)
+% | |
+% Design and implement the Client Application (iterate)
+% |
+% Prove Client
+% |
+% Implement and prove Protocol
+% |
+% Prove the Inductive Invariant
+
+\subsection{Adapt protocol and design state transition system}
+By adapting the protocol we try to focus on the 'core' parts of the protocol
+and to do away with the 'conveniece' parts. For Paxos, this was focusing on the
+part of the protocol that deals with achieving consensus and not looking at the
+part where the learner is informed of the decision.
+
+We also need to design state transition systems for the nodes that participate
+in the protocol. This makes it easier for us to encode the protocol in Disel as
+we already know which send and receive transitions we will need from each state
+and thus can easily code the transition wrappers.
+
+In chapter 4, we look go into the details of how we tackled this stage on our way
+to mechanising the proof of Paxos.
+
+\subsection{Code the client application}
+Secondly, we need to think of a client application that uses the implemented protocol.
+We need to design and implement a client that will demonstrate the properties of the
+protocol that we want to prove. In case of Paxos, we designed a client
+where nodes try to acheive consensus on one of the proposals that the proposer
+is initialised with. This enabled us to see in action the stages of the protocol
+that lead to consensus being achieved.
+
+While using Disel, we often had to cycle between stage 1 and stage 2.
+This is because while implementing the client, you realise things like, you are
+missing one state for a node that is required in order for the protocol to progress.
+While writing the client for Paxos, we realised that we were missing the \texttt{PAbort}
+state for the proposer, which was necessary to signify when a proposer stops
+participating in the protocol.
+
+The process of cycling between stages 1 and 2 allow us to solidify our adapted
+protocol. Doing this at an early stage (before starting the proofs)
+also has the advantage of us not having to rewrite a lot of code that will also
+break all the proofs relating to the change.
+
+Additionally, implementing the client also helps us identify unnecessary stages
+and transitions in the adapted protocol which were not needed to implement the
+client. Reducing the number of states and transitions vastly reduces the amount
+of things you will need to prove in the later stages.
+
+\subsection{Prove the client}
+The next stage involves proving that the code for the client actually follows
+the adapted protocol. Thus, finishing the proofs in this stage gives us
+confidence that our adapted protocol can actually be used to fullfill the role
+which our client performs. In case of Paxos, this helped us realise that our
+adapted protocol can be used to achieve consensus among the acceptors.
+
+From this stage onwards, as we move to stages 4 and 5 we end up strengthening
+the proof of our protocol. Finishing stage 4 completes the proof of the protocol
+while reaching stage 5 actually adds an inductive invariant that stregthens the
+proof of the protocol even further.
+
+\subsection{Encode and prove the adapted protocol}
+Having proved that client follows the protocol, the next stage is
+to actually finish the implementation of the protocol and to prove it. Finishing
+stage 3, helped us be sure that the state transitions we have are enough for
+realising the `core' part of the protocol and that action of the client is proved.
+Now we need to prove the protocol itself.
+
+Finishing this stage meant that we have finished the proof of the protocol,
+although we can only be sure that ...
+
+In the proof of Paxos, we were only able to finish still stage 4. We designed
+the inductive invariant but ran out of time to prove it.
+
+\subsection{Prove the inductive invariant}
+
 % The analysis part of the chapter is what you did to map the requirements
 % information into the first pass design. You can think of analysis as the
 % first stage of design, and the purpose is to show how the requirements
