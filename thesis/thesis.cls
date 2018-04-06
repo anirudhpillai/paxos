@@ -120,9 +120,10 @@
 \renewcommand\listtablename{Listing of tables}
 
 % References. +  Chapter headings
-\renewcommand\bibname{References}
-\RequirePackage[super,comma,numbers]{natbib}
-\renewcommand{\bibnumfmt}[1]{[#1]}
+% \renewcommand\bibname{References}
+% \RequirePackage[super,comma,numbers]{natbib}
+% \renewcommand{\bibnumfmt}[1]{[#1]}
+
 \RequirePackage[palatino]{quotchap}  % creates the large headings
 \renewcommand*{\chapterheadstartvskip}{\vspace*{-6\baselineskip}}  % moving chapter heading up
 \renewcommand*{\chapterheadendvskip}{\vspace{1\baselineskip}}

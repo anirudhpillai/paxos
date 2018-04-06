@@ -5,6 +5,8 @@
 % \lstset{basicstyle=\footnotesize\ttfamily,breaklines=true}
 \lstset{style=Coq}
 
+\usepackage[numbers]{natbib}
+
 \begin{document}
 
 
@@ -31,9 +33,10 @@
 \setstretch{\dnormalspacing}
 
 \clearpage
+\bibliographystyle{IEEEtranN}
 \bibliography{references}
 \addcontentsline{toc}{chapter}{References}
-\bibliographystyle{apalike2}
+% \bibliographystyle{apalike2}
 
 \begin{appendices}
     \include{chapters/appendixA}
