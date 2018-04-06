@@ -188,11 +188,11 @@
 	\pagenumbering{roman}
 	\setcounter{page}{3}
 	\pagestyle{fancy}
-	\lhead{Thesis advisor: Professor \@advisor} \rhead{\@author}
+	\lhead{Thesis advisor: \@advisor} \rhead{\@author}
 	\renewcommand{\headrulewidth}{0.0pt}
 	\vspace*{35pt}
 	\begin{center}
-	\Large \textcolor{SchoolColor}{\@title} \normalsize \\
+	\Large \textcolor{SchoolColor}{Mechanised Verification of Paxos-like Consensus Protocols} \normalsize \\
 	\vspace*{20pt}
 	\scshape Abstract \\ \rm
 	\end{center}

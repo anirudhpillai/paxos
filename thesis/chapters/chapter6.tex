@@ -14,9 +14,109 @@
 % – Wrap-up and final thoughts on your project.
 
 \section{Summary of Achievements}
+The project achieved all its goals apart from proving the inductive invariant.
+\begin{enumerate}
+  \item \textbf{Modelling the Protocol} \\
+    We designed the state transition systems for Paxos in order to help encode it in
+    Disel. The state transition systems were also tested on the Python simulator
+    and then encoded in Disel. We also designed the inductive invariant for Paxos
+    that proved its correctness.
+  \item \textbf{Client Application} \\
+    We also created a client application that uses the encoded protocol. The
+    code for the client was extracted using Disel and we successfully wrote
+    wrappers around it as well.
+\end{enumerate}
 
 \section{Critical Evaluation of the project}
+Below we look at a few places in the project where things were not proved
+mechanically.
+\begin{enumerate}
+  \item \textbf{Inductive Invariant} \\
+    We did not mechanise the proof of the designed inductive invariant in Disel.
+    This will enable us to reach stage 5, of the previosly mentioned Disel workflow,
+    thus, strengthening the proof.
+  \item \textbf{Learner in Client Application} \\
+    We were successfully able to interface with the extracted code for the client
+    application but writing a wrapper around it. The wrapper basically performed
+    the role of the learner in Paxos and announced when the acceptors had
+    achieved consensus. Using the wrapper meant that client application was not
+    fully verified. In order to achieve that, one would have to design and add the
+    state transition system for the learner in the adapted protocol and encode it
+    in Disel.
+
+\end{enumerate}
+
+\subsection{Evaluation of Disel}
+Disel was the critical component of this project and for most purposes, it
+stacked up very well to meet all the requirements.
+The experience of encoding in Disel felt very natural. This was because
+focusing on the `core' logic of the protocol and then representing it
+as state transition diagram is quite intuitive. Which then makes
+encoding it as a \texttt{step} function in Disel very easy.
+
+Building the client application showed that one can successfully extract
+the OCaml code for the verified protocol. Moreover, writing wrappers
+around the code showed that extracted code can be used as a verfied library
+in other larger applications.
+
+%% TODO: Add anecdote
+There were numerous instances where, while doing the proofs in Disel
+ended up revealing flaws in the implementation. One of these situations was
+when we found a mistake in our acceptor implementation. We came
+across it when we were not able to prove the post condition of \texttt{acceptor\_round}
+as the acceptor was never reaching the \texttt{AAccepted} state.
+
+The reason for this was because we when an acceptor receives an \texttt{accept\_request}
+we checked if the incoming proposal had a proposal number greater than the one
+currently held by the proposal, and only then move to the AAccepted state. The fact
+that we were reading the state of the acceptor after receiving the incoming message
+meant that by then the acceptor had already transition its state accordingly
+when it received it and so the proposal number held by it was always
+equal to the incoming messages proposal. This meant that the acceptor would not
+send a promise response.
+
+\begin{lstlisting}
+Do _ (e <-- read_round;
+   (* need to read state here as once it receives the message,
+      it already changes state *)
+   rs <-- read_state;
+   msg <-- receive_prepare_req_loop e;
+   (match msg with
+    | Some body =>
+      let: prepare_no := head 0 body in
+      let: promised_no := read_promised_number rs in
+      let: promised_val := read_promised_value rs in
+      resp_to_prepare_req e (promised_no < prepare_no)
+        prepare_no promised_no promised_val
+    | _  => resp_to_prepare_req e false 0 0 0 (* results in sending nack *)
+   end);;
+\end{lstlisting}
+
+Catching these bugs shows how useful it is to do the proofs in Disel as they
+would not have been easily noticed otherwise.
+
+There obviously is the drawback that implementation time is increased as one
+also needs to prove every single transition.
+
 
 \section{Future Work}
+First steps would definitely be to finish mechanising the left out things
+pointed in the previous section. This will help us reach stage 5, in the Disel
+workflow. After it would be possible to try proving the optimisations
+in Paxos based on the proof of the `core' protocol. It would then be possible
+to use `Hooks' \cite{9} in Disel to compose the proof with proofs of other
+verified components.
 
-\section{Final Thoughts}
+There are also a few areas for future work in Disel.
+Finding the inductive invariant for the protocol is much harder task than
+desiging the state transtion system. The Disel paper \cite{9} mentioned the prospect
+of combining Disel with Ivy \cite{19}, which would offer assistance in finding
+the inductive invariant. Another thing, also mentioned in the Disel paper, is
+the absence of proving the liveness properties in Disel. Hence, the proof of
+Paxos which we implemented also does not account for liveness whereas tools like
+IronFleet \cite{15} enable one to also prove livenes.
+Finally, another aspect of Paxos which we did not look at was its fault
+tolerance properties. There could be ways to encode it in as a part of the
+protocol but maybe it might also be possible for Disel to provide an
+abstraction which can be used to prove the fault tolerance properties of
+any arbitary protocol.
