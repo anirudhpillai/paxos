@@ -186,11 +186,18 @@
 
 \renewcommand{\maketitle}{
 	\thispagestyle{empty}
-  {\includegraphics[scale=0.4]{figures/ucl_logo.png}} \protect\\
+  \newgeometry{top=0cm}
+  {
+    \begin{figure}[t]
+      \hspace*{-3.33cm}
+      \includegraphics[width=\paperwidth]{figures/ucl_logo.png}
+    \end{figure}
+  }
 	\begin{center}
   \linespread{1}{
     \textcolor{SchoolColor}{
     	\Huge
+      \vspace{2.5cm}
       \parbox{\linewidth}{
         \begin{center}
           \thetitle
@@ -223,6 +230,7 @@
     }
   }
 	\end{center}
+  \restoregeometry
 }
 
 \newcommand{\abstractpage}{
