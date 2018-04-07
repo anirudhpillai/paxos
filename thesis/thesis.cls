@@ -184,6 +184,47 @@
     urlcolor=SchoolColor,
 }
 
+\renewcommand{\maketitle}{
+	\thispagestyle{empty}
+	\begin{center}
+  \linespread{1}{
+    \textcolor{SchoolColor}{
+    	\Huge
+      \parbox{\linewidth}{
+        \begin{center}
+          \thetitle
+        \end{center}
+      }
+    }
+  }
+  \normalsize \\
+	{
+  	\Large
+  	\vspace{100pt}
+  	\theauthor\\
+  	\vspace{12pt}
+  	BSc Computer Science\\
+  	\vspace{12pt}
+  	Submission Date: 30th April 2018\\
+    \vspace{12pt}
+  	Supervisor: Dr. Ilya Sergey\\
+  	\vspace*{\fill}
+	}
+	\justify
+	{
+    \linespread{1.2}{
+      \large
+      % { \fontfamily{\sfdefault}\selectfont
+        This report is submitted as part requirement for the BSc degree in Computer Science at UCL.
+        It is substantially the result of my own
+        work except where explicitly indicated in the text. The report may be freely copied
+        and distributed provided the source is explicitly acknowledged. \par
+      % }
+    }
+  }
+	\end{center}
+}
+
 \newcommand{\abstractpage}{
 	\newpage
 	\pagenumbering{roman}
