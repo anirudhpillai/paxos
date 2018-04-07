@@ -5,16 +5,12 @@ background information and look at related work to see different approaches used
 to solve the problem.
 
 \section{Distributed Systems}
-%% TODO: Find nice intro
-
 A distributed system is a model in which processes running on running different
 computers, which are connected together in a network, exchange messages to coordinate
 their action, often resulting in the user thinking of the entire system as one single
 unified computer. A computer in the distibuted system is also alternatively referred to as a
 processor or a node in the system. Each node in a distributed systems has its
 own memory.
-
-%% TODO: Structured in terms of client and servers
 
 We will now go over a few concepts of distributed systems which will help us understand
 the characteristics of the protocols that run on these systems. This will lay down the
@@ -23,10 +19,8 @@ groundwork for us to understand the Paxos protocol on which this project is base
 \subsection{Asynchronous Environment}
 An asynchronous distributed system is one where there are no guarantees about the
 timing and order in which events occur.
-
 The clocks of each of the process in the system can be out of sync and may not be
 accurate. Therefore, there can be no guarantees about the order in which events occur.
-
 Further, messages sent by one process to another can be delayed for an arbitary period of time.
 
 A protocol running in an asynchronous enviroment has to account for these conditions
@@ -43,8 +37,8 @@ corrupted messages.
 Fault tolerance is one of the main reasons for using a distributed system as it
 increases the chances of your application continuing to functioning correctly and
 makes it more dependable. As Netflix mention on their blog
-'Fault Tolerance is a Requirement, Not a Feature'.
-%% TODO: Reference https://medium.com/netflix-techblog/fault-tolerance-in-a-high-volume-distributed-system-91ab4faae74a
+'Fault Tolerance is a Requirement, Not a Feature' \cite{20}.
+%% Reference https://medium.com/netflix-techblog/fault-tolerance-in-a-high-volume-distributed-system-91ab4faae74a
 With their Netflix API receiving more than 1 billion requests a day, they expect
 that it is guaranteed that some of the components of their distributed system will fail.
 Using a fault tolerant distributed system they are able to ensure that a small failure
@@ -194,12 +188,6 @@ different roles - proposer, acceptor or learner.
     eg. Send request to client informing them about the agreed value.
 \end{itemize}
 
-% Safety Invariants:
-% \begin{itemize}
-%   \item A value can only be chosen after it has been proposed.
-%   \item Only one value may be chosen.
-% \end{itemize}
-
 \vspace{-4mm}
 \subsection{Choosing a Value}
 For passing around the value to be chosen from one processor to the other,
@@ -216,34 +204,12 @@ a set denoting a majority of all the available acceptors.
 Consensus is achieved when a proposal is accepted by a majority of acceptors.
 \end{quote}
 
-% There are a few requirements which are imposed for the algorithm to function correctly.
-% The implementations of the algorithm ensure that these requirements are maintained.
-% \begin{enumerate}
-%   \item \textbf{R1} An acceptor must accept the first proposal it receives.
-%   \item \textbf{R2} Once consensus has been achieved on a proposal,
-%     $\langle n_1, v_1 \rangle$ then every other proposal, $\langle n_2, v_2 \rangle$,
-%     on which consensus is achieved and has $n_2 > n_1$ will also have
-%     $v_2 = v_1$.
-% \end{enumerate}
-
-% \textbf{R1} ensures that a value is agreed in the case when only a single value
-% has been proposed by a single proposer. The most basic case is when you only have
-% one acceptor. The acceptor can choose the first proposal that it receives from
-% any of the proposers and then it can ignore the rest. The problem with using
-% this is that if the single acceptor crashes then the algorithm won't make progress.
-%
-% So you need to have multiple acceptors but this is where the second problem arises.
-% As multiple proposers might propose different values to different acceptors who
-% might end up accepting different values.\textbf{R2} ensures that even though the
-% acceptors might accept a proposal from a different proposer, all of the
-% proposals accepted will have the same value. (Not sure about this)
-
+\vspace{-4mm}
 \subsubsection{The Algorithm}
 Simple paxos runs in rounds until consensus is achieved (a successful round
 has occurred, where a majority of acceptors have accepted a proposal).
 A successful round of the algorithm has two phases, each of which can
 be subdivided into parts a, b.
-%% TODO: Reference to proof of completion
 
 \begin{itemize}
   \item \textbf{Phase 1a: Prepare Request.}
@@ -283,7 +249,7 @@ be subdivided into parts a, b.
     If none of the promise responses received by the proposer contain a proposal,
     the proposer is free to set $v'$ to any value it likes.
     The proposer then sends this accept request with proposal $\langle n, v' \rangle$
-    to another quorum of acceptors.
+    to another \texttt{quorum} of acceptors.
   \item \textbf{Phase 2b: Accepted Response.}
     Any acceptor that receives the accept request with proposal $\langle n, v \rangle$
     responds with an accepted response if and only if it hasn't already promised
@@ -323,25 +289,24 @@ a message.
 
 \subsection{Protocol Encoding}
 We will now look at how Disel requires the state space of a protocol to be encoded in it.
+The figure \ref{fig:DiselStateSpace} shows the distributed state space and also the world
+components.
 
-%% TODO: cite image
 \begin{figure}
 \centering
 \includegraphics[width=\textwidth]{figures/disel_state_space.jpeg}
-\caption{Disel State Space
-\label{fig:myInlineFigure}}
+\caption{Disel's distributed state space and the world components as show in \cite{9}
+\label{fig:DiselStateSpace}}
 \end{figure}
 
-%% TODO: cite Disel paper
-`Each global system state $s$ is a finite partial mapping from protocol labels
-$l \in \mathrm{\texttt{Lab}}$ to statelets. Each statelet represents a
-protocol-specific component, consisting of a `message soup' MS and a per-node
-local state (\texttt{DistLocState}).'
+% The Disel paper \cite{9} defines the global system state as follows.
+% ``Each global system state $s$ is a finite partial mapping from protocol labels
+% $l \in \mathrm{\texttt{Lab}}$ to statelets. Each statelet represents a
+% protocol-specific component, consisting of a `message soup' \texttt{MS} and a per-node
+% local state (\texttt{DistLocState}).''
 
-%% TODO explain what a state is
-
-As you can see from the image, a protocol $P$ in Disel is defined as a tuple
-of the Coherence, the set of send transitions and the set of recieve transitions.
+As you can see from \ref{fig:DiselStateSpace}, a protocol $P$ in Disel is defined as a tuple
+of the \texttt{Coherence}, the set of send transitions and the set of recieve transitions.
 Let us now look at each of these components in detail.
 
 A \texttt{Coherence} is a function that takes in a statelet and returns a proposition
@@ -457,13 +422,18 @@ Once this implementation has been finished in Disel we can use Disel's extractio
 capabilities to extract the OCaml code for executing the program. (Outlined in Chapter 5)
 
 \subsection{Inductive Invariant}
-%% TODO: Improve linking
-%% TODO: or more intuition, check Chapter 5 of http://adam.chlipala.net/frap/frap_book.pdf
+As many other verification tools for distributed protocols, Disel relies on using
+inductive invariants to prove the correctness of the protocol. In this section,
+we look at what are invariants and inductive invariants.
+
+%% or more intuition, check Chapter 5 of http://adam.chlipala.net/frap/frap_book.pdf
 A invariant in a program is a property of a program that always holds true,
 from the start through to the end of execution of the program. An invariant can be for something
 more specific like a function or even a loop. The only requirement is the property
 described by the invariant should always hold before, during and after execution
-of the part of that code.
+of the part of that code. To put it more formally,
+`An invariant of a transition system is a property that is
+always true, in all of the system’s reachable states.' \cite{21}.
 
 The problem with using just an invariant like $x > 2$ is that, you may assume
 that the invariant holds before the execution of the program, but you still
@@ -482,7 +452,8 @@ of a protocol and a starting state for the protocol in which the invariant holds
 in order to show that the protocol maintains the invariant, you only need to
 prove the inductive invariant maintains the induction property over any possible state
 transition in the protocol. This is exactly how you use an inductive invariant in
-Disel.
+Disel. Developing and encoding the inductive invariant for the protocol in Disel
+is the way to verify it.
 
 
 \section{Related Work}

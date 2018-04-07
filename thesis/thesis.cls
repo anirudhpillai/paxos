@@ -186,6 +186,7 @@
 
 \renewcommand{\maketitle}{
 	\thispagestyle{empty}
+  {\includegraphics[scale=0.4]{figures/ucl_logo.png}} \protect\\
 	\begin{center}
   \linespread{1}{
     \textcolor{SchoolColor}{
@@ -199,21 +200,20 @@
   }
   \normalsize \\
 	{
-  	\Large
   	\vspace{100pt}
-  	\theauthor\\
+  	{\Large \theauthor}\\
   	\vspace{12pt}
   	BSc Computer Science\\
-  	\vspace{12pt}
-  	Submission Date: 30th April 2018\\
     \vspace{12pt}
   	Supervisor: Dr. Ilya Sergey\\
+  	\vspace{12pt}
+  	Submission Date: 30th April 2018\\
   	\vspace*{\fill}
 	}
-	\justify
+	\center
 	{
     \linespread{1.2}{
-      \large
+      % \large
       % { \fontfamily{\sfdefault}\selectfont
         This report is submitted as part requirement for the BSc degree in Computer Science at UCL.
         It is substantially the result of my own
