@@ -1,1 +1,312 @@
+\newgeometry{top=2cm, left=1cm, right=1cm, bottom=2cm}
+\begin{landscape}
+
 \chapter{Simulator Code Listing}
+\begin{multicols*}{2}
+
+\section{paxos.py}
+\begin{lstlisting}[language=Python]
+#!/usr/bin/env python3
+
+import os
+import signal
+import sys
+import time
+
+from paxos.proposer import Proposer
+from paxos.acceptor import Acceptor
+
+NACCEPTORS = 3
+NPROPOSERS = 2
+
+
+class Env:
+    """
+    Sets up the environment and runs the protocol.
+    Initialises each of the nodes in the protocol.
+
+    Attributes:
+        :procs holds all the executing processes
+    """
+
+    def __init__(self):
+        self.procs = {}
+
+    def send_msg(self, dst, msg):
+        if dst in self.procs:
+            self.procs[dst].deliver(msg)
+
+    def add_proc(self, proc):
+        self.procs[proc.id] = proc
+        proc.start()
+
+    def remove_proc(self, pid):
+        del self.procs[pid]
+
+    def run(self):
+        proposers = range(1, NPROPOSERS + 1)
+        acceptors = range(NPROPOSERS, NPROPOSERS + NACCEPTORS)
+
+        for i in acceptors:
+            pid = "Acceptor %d" % i
+            Acceptor(self, i)
+
+        for i in proposers:
+            pid = "Proposer %d" % i
+            Proposer(self, acceptors, i, i)
+
+    def terminate_handler(self, signal, frame):
+        self._graceful_exit()
+
+    def _graceful_exit(self, exit_code=0):
+        sys.stdout.flush()
+        sys.stderr.flush()
+        os._exit(exit_code)
+
+
+def main():
+    e = Env()
+    e.run()
+    signal.signal(signal.SIGINT, e.terminate_handler)
+    signal.signal(signal.SIGTERM, e.terminate_handler)
+    signal.pause()
+
+
+main()
+\end{lstlisting}
+
+\newpage
+
+\vspace{1cm}
+\section{paxos/process.py}
+\begin{lstlisting}[language=Python]
+import multiprocessing
+import threading
+
+
+class Process(threading.Thread):
+    """
+    Attributes:
+        :state  current state of the Acceptor
+        :id     id of the Acceptor
+        :env    environment this Acceptor is running in
+    """
+
+    def __init__(self, env, id):
+        super(Process, self).__init__()
+        self.inbox = multiprocessing.Manager().Queue()
+        self.env = env
+        self.id = id
+
+    def run(self):
+        try:
+            self.body()
+            self.env.remove_proc(self.id)
+        except EOFError:
+            print("Exiting...")
+
+    def get_next_msg(self):
+        return self.inbox.get()
+
+    def send_msg(self, dst, msg):
+        self.env.send_msg(dst, msg)
+
+    def deliver(self, msg):
+        self.inbox.put(msg)
+\end{lstlisting}
+
+\newpage
+
+\vspace{1cm}
+\section{paxos/message.py}
+\begin{lstlisting}[language=Python]
+"""
+This file defines the Message super class and all the other
+types of messages used in the adapted Simple Paxos protocol.
+"""
+
+
+class Message:
+    """
+    Message super class which all the differnt message types inherit.
+
+    Attributes:
+        :src       sender of the message
+        :proposal  proposal contained in the message
+    """
+
+    def __init__(self, src, proposal):
+        self.src = src
+        self.proposal = proposal
+
+    def __str__(self):
+        return str(self.__dict__)
+
+
+class PrepareRequestMessage(Message):
+    def __init__(self, src, proposal):
+        Message.__init__(self, src, proposal)
+
+
+class AcceptRequestMessage(Message):
+    def __init__(self, src, proposal):
+        Message.__init__(self, src, proposal)
+
+
+class PromiseResponseMessage(Message):
+    def __init__(self, src, proposal):
+        Message.__init__(self, src, proposal)
+
+
+class NackResponseMessage(Message):
+    def __init__(self, src):
+        Message.__init__(self, src, (-1, -1))
+\end{lstlisting}
+\end{multicols*}
+
+\newpage
+
+
+\section{paxos/proposer.py}
+\begin{multicols*}{2}
+\begin{lstlisting}[language=Python]
+from .process import Process
+from .message import AcceptRequestMessage, PrepareRequestMessage, \
+    PromiseResponseMessage, NackResponseMessage
+
+
+class Proposer(Process):
+    """
+    Implementation of the Proposer in the adapted Simple Paxos protocol.
+
+    Attributes:
+        :state      current state of the Proposer
+        :acceptors  set of acceptors in the current environment
+        :env        environment this Proposer is running in
+    """
+
+    def __init__(self, env, acceptors, p_no, p_val):
+        Process.__init__(self, env, p_no)
+        self.state = ("PInit", p_no, p_val)
+        self.acceptors = acceptors
+        self.env = env
+        self.env.add_proc(self)
+
+    def send_prepare_req(self):
+        _, p_no, p_val = self.state
+        for acceptor in self.acceptors:
+            self.send_msg(
+                acceptor,
+                PrepareRequestMessage(p_no, (p_no, p_val))
+            )
+
+    def send_accept_req(self):
+        _, p_no, p_val = self.state
+        for acceptor in self.acceptors:
+            self.send_msg(
+                acceptor,
+                AcceptRequestMessage(p_no, (p_no, p_val))
+            )
+
+    def body(self):
+        _, p_no, p_val = self.state
+
+        self.send_prepare_req()
+        self.state = ("PWaitPrepResp", [], p_no, p_val)
+
+        while True:
+            msg = self.get_next_msg()
+            if isinstance(msg, PromiseResponseMessage):
+                if self.state[0] == "PWaitPrepResp":
+                    src = msg.src
+                    recv_p_no, recv_p_val = msg.proposal
+                    recv_promises = self.state[1]
+
+                    if src not in map(lambda x: x[0], recv_promises):
+                        recv_promises.append((src, recv_p_no, recv_p_val))
+                        if sorted(
+                            map(lambda x: x[0], recv_promises)
+                        ) == sorted(self.acceptors):
+                            recv_promises.sort(key=lambda x: x[1])
+                            highest_numbered_value = recv_promises[0][2]
+                            self.state = (
+                                "PSentAccReq", p_no, highest_numbered_value
+                            )
+                            self.send_accept_req()
+                            print("Exiting proposer", p_no)
+                            break
+                        else:
+                            self.state = (
+                                "PWaitPrepResp", recv_promises, p_no, p_val
+                            )
+            elif isinstance(msg, NackResponseMessage):
+                print("Exiting proposer", p_no)
+                break
+\end{lstlisting}
+\end{multicols*}
+
+\newpage
+
+\section{paxos/acceptor.py}
+\begin{multicols*}{2}
+\begin{lstlisting}[language=Python]
+from .process import Process
+from .message import AcceptRequestMessage, PrepareRequestMessage, \
+    PromiseResponseMessage, NackResponseMessage
+
+
+class Acceptor(Process):
+    """
+    Implementation of the Acceptor in the adapted Simple Paxos protocol.
+
+    Attributes:
+        :state  current state of the Acceptor
+        :id     id of the Acceptor
+        :env    environment this Acceptor is running in
+    """
+
+    def __init__(self, env, id):
+        Process.__init__(self, env, id)
+        self.state = ("AInit",)
+        self.env = env
+        self.env.add_proc(self)
+        self.id = id
+
+    def send_promise_resp(self, to):
+        p_no, p_val = self.state[1]
+        self.send_msg(to, PromiseResponseMessage(self.id, (p_no, p_val)))
+
+    def send_nack_resp(self, to):
+        self.send_msg(to, NackResponseMessage(self.id))
+
+    def body(self):
+        while True:
+            msg = self.get_next_msg()
+            p_no, p_val = msg.proposal
+
+            if isinstance(msg, PrepareRequestMessage):
+                if self.state[0] == "AInit":
+                    self.state = ("APromised", msg.proposal)
+                    self.send_promise_resp(p_no)
+                elif self.state[0] == "APromised":
+                    promised_no, _ = self.state[1]
+                    if p_val < promised_no:
+                        self.send_nack_resp(p_no)
+                    else:
+                        self.state = ("APromised", msg.proposal)
+                        self.send_promise_resp(p_no)
+                else:
+                    self.send_nack_resp(p_no)
+            elif isinstance(msg, AcceptRequestMessage):
+                if self.state[0] == "AInit":
+                    self.state = ("AAccepted", msg.proposal)
+                else:
+                    promised_no, _ = self.state[1]
+                    if p_val >= promised_no:
+                        self.state = ("AAccepted", msg.proposal)
+                        print("Node %d has state %s" % (self.id, self.state))
+\end{lstlisting}
+
+\end{multicols*}
+\end{landscape}
+\restoregeometry
