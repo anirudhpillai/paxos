@@ -3,6 +3,13 @@ import threading
 
 
 class Process(threading.Thread):
+    """
+    Attributes:
+        :state  current state of the Acceptor
+        :id     id of the Acceptor
+        :env    environment this Acceptor is running in
+    """
+
     def __init__(self, env, id):
         super(Process, self).__init__()
         self.inbox = multiprocessing.Manager().Queue()
@@ -11,7 +18,6 @@ class Process(threading.Thread):
 
     def run(self):
         try:
-            print("Here I am: ", self.id)
             self.body()
             self.env.remove_proc(self.id)
         except EOFError:

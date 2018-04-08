@@ -13,6 +13,14 @@ NPROPOSERS = 2
 
 
 class Env:
+    """
+    Sets up the environment and runs the protocol.
+    Initialises each of the nodes in the protocol.
+
+    Attributes:
+        :procs holds all the executing processes
+    """
+
     def __init__(self):
         self.procs = {}
 
@@ -28,7 +36,7 @@ class Env:
         del self.procs[pid]
 
     def run(self):
-        proposers = range(0, NPROPOSERS)
+        proposers = range(1, NPROPOSERS + 1)
         acceptors = range(NPROPOSERS, NPROPOSERS + NACCEPTORS)
 
         for i in acceptors:
@@ -38,9 +46,6 @@ class Env:
         for i in proposers:
             pid = "Proposer %d" % i
             Proposer(self, acceptors, i, i)
-
-        for i in acceptors:
-            print(self.procs[i].state)
 
     def terminate_handler(self, signal, frame):
         self._graceful_exit()

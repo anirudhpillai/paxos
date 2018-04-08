@@ -4,6 +4,15 @@ from .message import AcceptRequestMessage, PrepareRequestMessage, \
 
 
 class Acceptor(Process):
+    """
+    Implementation of the Acceptor in the adapted Simple Paxos protocol.
+
+    Attributes:
+        :state  current state of the Acceptor
+        :id     id of the Acceptor
+        :env    environment this Acceptor is running in
+    """
+
     def __init__(self, env, id):
         Process.__init__(self, env, id)
         self.state = ("AInit",)
@@ -21,11 +30,9 @@ class Acceptor(Process):
     def body(self):
         while True:
             msg = self.get_next_msg()
-            print("msg", msg)
             p_no, p_val = msg.proposal
 
             if isinstance(msg, PrepareRequestMessage):
-                print(self.state[0])
                 if self.state[0] == "AInit":
                     self.state = ("APromised", msg.proposal)
                     self.send_promise_resp(p_no)
@@ -45,3 +52,4 @@ class Acceptor(Process):
                     promised_no, _ = self.state[1]
                     if p_val >= promised_no:
                         self.state = ("AAccepted", msg.proposal)
+                        print("Node %d has state %s" % (self.id, self.state))
