@@ -257,8 +257,10 @@ be subdivided into parts a, b.
     to another \texttt{quorum} of acceptors.
   \item \textbf{Phase 2b: Accepted Response.}
     Any acceptor that receives the accept request with proposal $\langle n, v \rangle$,
-    responds with an accepted response if and only if it hasn't already promised
+    responds with an \texttt{accepted response} if and only if it hasn't already promised
     not to respond to any proposals with proposal number $n'$ where $n' >= n$.
+    The \texttt{accepted response} is sent to the learner and contains the proposal
+    that was accepted by the acceptor.
 \end{itemize}
 
 \vspace{-4mm}
@@ -268,7 +270,8 @@ have agreed on a value. There are various ways to do this.
 
 \begin{enumerate}
   \item Whenever an acceptor accepts a value, it should send the accepted proposal
-    to all the learners. The learners will then know when a majority of acceptors
+    to all the learners (\texttt{accepted response}).
+    The learners will then know when a majority of acceptors
     have accepted the same value.
   \item We can have a distinguished learner which informs other learners about
     the choose value. The acceptors only need to inform this particular learner

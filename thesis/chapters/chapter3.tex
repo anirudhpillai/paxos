@@ -24,7 +24,7 @@ of the verified protocol that uses Disel's code extraction features.
 \section{Analysis: Approach to Mechanising Proofs in Disel}
 Having decided on the requirements we came up with a workflow to
 mechanise the proof in Disel. Finishing all the stages in the workflow
-will help us meet all our requirements.
+will help us to meet all our requirements.
 
 \begin{figure}
 \centering
@@ -68,8 +68,8 @@ will help us meet all our requirements.
 % Prove the Inductive Invariant
 
 \subsection{Adapt protocol and design state transition system}
-By adapting the protocol we try to focus on the 'core' parts of the protocol
-and to do away with the 'conveniece' parts. For Paxos, this is focusing on the
+By adapting the protocol we try to focus on the `core' parts of the protocol
+and to do away with the `convenience' parts. For Paxos, this is focusing on the
 part of the protocol that deals with achieving consensus and not looking at the
 part where the learner is informed of the decision.
 
@@ -111,24 +111,24 @@ of things you will need to prove in the later stages.
 The next stage involves encoding and proving the protocol
 and proving that the code for the client actually follows
 the adapted protocol. Thus, finishing the proofs in this stage gives us
-confidence that our adapted protocol can actually be used to fullfill the role
+confidence that our adapted protocol can actually be used to fulfil the role
 which our client performs. In case of Paxos, this helped us realise that our
 adapted protocol can be used to achieve consensus among the acceptors.
 Finishing this stage means that we have finished the proof of the client.
-Yet, we can only be sure that the code follows the protocol.
+Yet, at this stage we can only be sure that the code follows the protocol.
 
 Reaching this state also gives us relatively strong correctness properties. This
 because just by ensuring the code follows the protocol, if the protocol we have
 implemented has already been, we can know that the code will work correctly
 although we cannot be completely sure until we finish the next stage.
 In the mechanising of Paxos we were only able to reach till this stage,
-we designed the inductive invariant but ran out of time to prove it.
-As the actual protocol we encoded is the simple paxos algorithm, it still
-gives us quite a strong correctness as the simple paxos algorithm has a proof
+we designed the inductive invariant but ran out of time to encode it.
+As the actual protocol we encoded is the simple Paxos algorithm, it still
+gives us quite a strong correctness as the simple Paxos algorithm has a proof
 of safety and has also been used to implement real world systems.
 
 \subsection{Implement and prove the inductive invariant}
 An inductive invariant is necessary as it helps verify the entire
 global system. As without it, the code might follow the protocol, but the
-protocol might itself be broken. In case of Paxos this will be the case that
-the protocol never achieves consensus.
+protocol might itself be broken. In case of Paxos this could be the case that
+the nodes follow the protocol but they never achieve consensus.

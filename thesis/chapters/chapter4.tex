@@ -18,24 +18,23 @@ encoded in Disel.
 
 \subsection{The Adapted Protocol}
 For mechanising the proof of Paxos in Disel, we followed the approach highlighted
-in the Disel section of Chapter 2 by first writing and testing the code for
-the protocol before writing the proofs. Applying this approach meant
+in the Disel section of Chapter 3. Applying this approach meant
 we needed to come up with the state transition system and the inductive invariant
 for the protocol which we will encode in Disel. Before coming up with these things
-though, we decided to simplify the actual simple paxos protocol that we will prove.
+though, we decided to simplify the actual simple Paxos protocol that we will prove.
 
 The goal of this simplification was to reduce the amount of things that we will need
-prove in Disel by actually focusing on the `core' parts of the protocol which
+to prove in Disel by focusing on the `core' parts of the protocol which
 lead to consensus being achieved. The `convenience' parts of the protocol, like
 the sub phase of informing the learner, aren't necessary for consensus being
 achieved in the global state and can also be proved separately after we have
 finished proving the `core' parts of the protocol. Garcia-Perez et al \cite{6}
 have also showed how the optimizations of a protocol can be verified separately
 from the `core' protocol. In their paper, they produce a verified implementation
-of multi paxos using their verified implementation of simple paxos.
+of multi Paxos using their verified implementation of simple Paxos.
 
 In order to adapt the protocol and focus on the `core' parts, the first thing
-we did was to do away with the `Learning the Chosen Value' phase of simple paxos.
+we did was to do away with the `Informing the learner' phase of simple Paxos.
 This is the phase where once an acceptor has accepted a proposal, it then informs
 a leaner by sending it an accepted request. We decided against proving this
 because we can use the inductive invariant to check the global state of the system.
@@ -45,18 +44,19 @@ from the inductive invariant when consensus has been achieved by checking the va
 of each of the accepted proposals.
 
 Doing away with the learning phase also meant that we did not have to implement
-a learner in our protocol as the role of the learner (detecting that consensus
-has been achieved) is performed by the inductive invariant.
-The learner is useful in actual paxos implementations as
-it can detect when consensus is achieved and can the inform the client, its
+a learner.
+% in our protocol as the role of the learner (detecting that consensus
+% has been achieved) is performed by the inductive invariant.
+The learner is useful in the actual Paxos implementations as
+it can detect when consensus is achieved and can then inform the client, its
 presence does not change how consensus is achieved. Removing the learner simplified
 our state transition diagram for the protocol as we did not have to account
 for the states of the learner and also the $Phase 2b$ transition of the
 accepted request.
 
-Additionally, we decided to remove some optimisation from the protocol.
+Additionally, we decided to remove some optimisations from the protocol.
 Optimisations are aspects of the protocol that improve its running time or
-resource consumption but improving upon the `mundane' way of doing the same
+resource consumption by improving upon the `mundane' way of doing the same
 thing. Removing optimisations allowed us to simplify our proofs in Disel.
 
 Firstly, we decided that a proposer, if it fails while trying to achieve
@@ -77,7 +77,7 @@ This does not alter the protocol as the entire set of acceptors is a valid
 quorum of acceptors.
 
 This adapated and simplified protocol allows us to focus on verifying the core
-logic (the part dealing with achieving consensus) of paxos. The
+logic (the part dealing with achieving consensus) of Paxos. The
 optimisations and `conveniece' that we removed can be verified separately after
 the core logic has been verified.
 
@@ -99,7 +99,7 @@ has to be shown to hold with the invariant so reducing the state transitions,
 reduces the number of proofs.
 
 We decided that a node can either be initialised as an acceptor or a proposer.
-The state transitions of each node will depend upon this intial state, so below
+The state transitions of each node will depend upon this initial state, so below
 we will separately look at the state transition systems for the proposer and the
 acceptor.
 
@@ -108,7 +108,7 @@ is that the acceptor sends and receives messages from a single proposer while a
 proposer has to send and receive messages from all the acceptors.
 
 
-\subsubsection{proposer}
+\subsubsection{Proposer}
 \begin{figure}
 \centering
 \includegraphics[width=0.5\textwidth]{figures/proposer_state_transitions.png}
@@ -121,7 +121,7 @@ a \texttt{proposal} (a custom defined data type which is tuple of two natural nu
 $\langle p, v \rangle$.
 The natural number $p$ is the proposal number and $v$ is the value that the
 proposer tries to achieve consensus on. This means that the first prepare
-request this proposer sends will this proposal $\langle p, v \rangle$.
+request this proposer sends will include this proposal $\langle p, v \rangle$.
 
 The proposer then moves to the \texttt{PSentPrep} state when it starts to send prepare
 requests to the acceptors. In this state, the proposer still holds the proposal
@@ -143,7 +143,7 @@ and a \texttt{proposal}.
 
 \texttt{Definition promises := seq (nid * bool * proposal).}
 
-The proposer stays in this states and keeps receiving messages from the acceptor
+The proposer stays in this state and keeps receiving messages from the acceptor
 until one of the following two things happen:
 \begin{enumerate}
   \item It receives a nack response from the acceptor. This indicates that the
@@ -172,7 +172,7 @@ accept requests to all the acceptors, it transitions to the \texttt{PAbort}
 state where it stops sending and receiving messages.
 
 
-\subsubsection{acceptor}
+\subsubsection{Acceptor}
 \begin{figure}
 \centering
 \includegraphics[width=0.5\textwidth]{figures/acceptor_state_transitions.png}
@@ -180,7 +180,7 @@ state where it stops sending and receiving messages.
 \label{fig:myInlineFigure}}
 \end{figure}
 
-The acceptor starts off in the \texttt{AInit} state. It doesn't hold any data
+The acceptor starts off in the \texttt{AInit} state. It does not hold any data
 in this state as it is not sending any messages. It keeps listening for messages
 and on receiving a prepare request message, it transitions to \texttt{APromised}
 state.
@@ -195,8 +195,8 @@ number of the proposal in the prepare request is not greater, the acceptor
 sends a nack response to the proposer who sent the prepare request and does not
 update its state.
 
-In the \texttt{APromised}, on receiving an accept request, if and only if
-the value of the proposal number proposal in the accept request is greater than
+An acceptor in the \texttt{APromised} state, on receiving an accept request, if
+the value of the proposal number of the proposal in the accept request is greater than
 the proposal number of the proposal that it currently holds, it transitions to the
 \texttt{AAccepted} state where it now holds the new proposal with the greater
 proposal number. If the proposal number of the new proposal number is not greater,
@@ -207,10 +207,10 @@ to messages. This is similar to the \texttt{PAbort} state for the proposer.
 
 
 \subsection{Inductive Invariant}
-A critical part of proving our protocol in Disel was desiging an inductive invariant
+A critical part of proving our protocol in Disel was designing an inductive invariant
 for our adapted protocol. The inductive invariant helps ensure the correctness of
 our adapted protocol enabling us to imposing requirements on the global state of the system.
-For proving the correctness of paxos we found that our invariant had to capture
+For proving the correctness of Paxos we found that our invariant had to capture
 when consensus is achieved on a value and also that once consensus is achieved
 on a particular value, further rounds of the protocol don’t change this value.
 
@@ -251,7 +251,7 @@ value that it proposes. Hence, two different proposers never propose a proposal
 with the same proposal number as they all are initialised with different
 proposal numbers. Additionally, each proposer only sends one round
 of accept requests with the same proposal. So as each proposer proposes only one
-value with a unique proposal number, we can conclude that each accepted proposal
+value with a unique proposal number, hus, we can conclude that each accepted proposal
 will have a unique value associated with a particular proposal number.
 
 For proving that \textbf{I2} is preserved, we need to show that once consensus
@@ -367,7 +367,7 @@ each node and prints out a boolean indicating when the inductive invariant is
 preserved or raise an error otherwise.
 
 \section{Encoding the protocol in Disel}
-Having designed the adpated protocol and tested it on a simulator, the next
+Having designed the adapted protocol and tested it on a simulator, the next
 step was to actually encode it in Disel. The most important part was to encode
 the state transitions of the protocol. In the encoding, we define an inductive
 type, \texttt{RoleState} that stores all the states a node can be in and the
@@ -391,8 +391,6 @@ Inductive RoleState :=
 (* acceptor states *)
 | AInit
 (* Holds the highest number promised in the proposal *)
-(* Storing a proposal and not just a nat as this makes it easier to catch the payload
-later on in the transitions *)
 | APromised of proposal
 (* Holds the highest number proposal accepted *)
 | AAccepted of proposal.

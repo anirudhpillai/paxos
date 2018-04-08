@@ -31,7 +31,7 @@ us detect things like unnecessary states early on in the process, which makes
 proving the protocol easier in the later stages.
 
 So our client was simple in that we wanted to initialise two proposers and three
-acceptors and then see the acceptors achieve consensus. Each proposal that is intialised
+acceptors and then see the acceptors achieve consensus. Each proposal that is initialised
 will only try once to achieve consensus using the proposal number that it is initialised
 with. If it receives a nack in the process, then it stops and does not retry to
 achieve consensus with a higher proposal number. As explained in the previous
@@ -49,7 +49,7 @@ the acceptor follows from that and can be found in the \texttt{PaxosAcceptor.v} 
 
 As a proposer starts off in the \texttt{PInit} state, the runnable implementation
 of a proposer needs to take in a proposal as a parameter which it will use to
-initilise the proposer with. Below is the main function for the proposer.
+initialise the proposer with. Below is the main function for the proposer.
 It first sends out the prepare requests and then starts receiving responses
 from the acceptors. \texttt{check\_promises} function checks that none of the
 responses contain a nack request. If no nacks were received then the proposer
@@ -73,7 +73,7 @@ Program Definition proposer_round (psal: proposal):
         accepted by any acceptor *)
 \end{lstlisting}
 
-Although, if a nack was recieved, the proposal still sends
+Although, if a nack was received, the proposal still sends
 accept requests with the proposal $\langle 0, 0 \rangle$. This proposal will
 never be accepted by any acceptor as its proposal number is not greater than 0.
 We still need to send these accept requests as both branches of a \texttt{if}
@@ -89,13 +89,13 @@ and transitions. This extracted code can then be used by a shim to create a
 client application.
 
 In order for the extraction to work, a runnable program needs to be supplied for each of
-the nodes participating in the protocol. Additionnaly, each node needs to
-be given an initial state that satisifed all the imposed invariants.
+the nodes participating in the protocol. Additionally, each node needs to
+be given an initial state that satisfied all the imposed invariants.
 
 The \texttt{SimplePaxosApp.v} file uses the runnable implementations of
 the proposer and acceptor and defines the code to instantiate the nodes.
 The client implementation instantiates two proposers and three acceptors.
-Each proposer is instantiated with a unique proposol which is required in the
+Each proposer is instantiated with a unique proposal which is required in the
 \texttt{PInit} state (the state in which each proposer starts off in).
 
 Extracting this code using Disel produces the OCaml code
@@ -176,7 +176,7 @@ can `announce' when the system has achieved consensus. An example wrapper which
 uses the extracted code is implemented in the \texttt{paxos.py} file.
 Writing such wrappers helps to extend the functionality of the extracted
 client application and also shows that the client application can be used in
-other applications where it provides a verified implementation of paxos.
+other applications where it provides a verified implementation of Paxos.
 
 
 \section{Verifying client in Disel}
