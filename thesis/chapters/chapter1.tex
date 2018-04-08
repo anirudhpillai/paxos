@@ -1,21 +1,21 @@
 \chapter{Introduction}
 
 \section{The Problem}
-Distributed systems are ubiquitous in the morder world yet they designing
-correctly functioning systems is still very hard. Furthermore such
+Distributed systems are ubiquitous in the modern world yet
+correctly implementing such systems is still very hard. Furthermore such
 systems are composed of various smaller components which in themself are
 hard to implement correctly. There has been recent work in developing
-frameworks to verify the implemention of the `smaller' sub-components
-but we there still remains the problem of checking whether these smaller
+frameworks to verify the implementation of the `smaller' sub-components
+but there still remains the problem of checking whether these smaller
 components, when combined together, achieve the desired goal.
 
 Disel is a framework for compositional verification of distributed
 protocols built on top of the Coq proof assistant. It allows one to verify
 the correctness of the implemented components and also to check whether
-the verfied components function correctly when combined together.
+the verified components function correctly when combined together.
 
 Another fundamental problem in the field of distributed computing is to make
-a set of process achieve consensus on something, for examples, the occurence
+a set of process achieve consensus on something, for examples, the occurrence
 of an event or the decision to take some action. The set of distributed
 computing protocols which tries to solve this problem are termed as
 consensus protocols. One of these protocols is the Paxos consensus protocol
@@ -36,7 +36,7 @@ project tries to achieve.
 \begin{enumerate}
 \itemsep0em
   \item Learn about distributed computing. I wanted to learn how to reason about
-    and implement distrubuted programs and the algorithms running on top of them.
+    and implement distributed programs and the algorithms running on top of them.
     Working on verifying a popular distributed protocol, will teach me about all
     the concepts needed to understand such systems. While actually implementing
     applications using the protocol will teach me how to apply the concepts to
@@ -74,7 +74,7 @@ stages in the project were as follows:
 \begin{itemize}
 \itemsep0em
   \item First stage was to read about and understand the various concepts related
-    to distibuted computing and more importantly to understand the workings of
+    to distributed computing and more importantly to understand the workings of
     Paxos-like consensus protocols. Implementing the Python simulation of the
     algorithm was very helpful in understanding the roles of each of the nodes
     in the protocol.
@@ -82,7 +82,7 @@ stages in the project were as follows:
   \item The next stage was to design an adapted protocol that we would prove and
     to design the state transition diagrams and inductive invariant of that protocol.
     We also designed the client application that would use the protocol and created
-    a Python simulation of it to ensure that the designed functioned correctly.
+    a Python simulation of it to ensure that the design functioned correctly.
 
   \item The final stage was actually mechanising the proofs in Disel. We first
     encoded the implementation of the client application and the protocol. Once,

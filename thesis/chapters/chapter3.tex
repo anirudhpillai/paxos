@@ -114,14 +114,8 @@ the adapted protocol. Thus, finishing the proofs in this stage gives us
 confidence that our adapted protocol can actually be used to fullfill the role
 which our client performs. In case of Paxos, this helped us realise that our
 adapted protocol can be used to achieve consensus among the acceptors.
-
-Finishing this stage meant that we have finished the proof of the protocol.
-Yet, at this stage we can only be sure that the code follows the protocol.
-
-From this stage onwards, as we move to stages 4 and 5 we end up strengthening
-the proof of our protocol. Finishing stage 4 completes the proof of the protocol
-while reaching stage 5 actually adds an inductive invariant that stregthens the
-proof of the protocol even further.
+Finishing this stage means that we have finished the proof of the client.
+Yet, we can only be sure that the code follows the protocol.
 
 Reaching this state also gives us relatively strong correctness properties. This
 because just by ensuring the code follows the protocol, if the protocol we have

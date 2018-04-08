@@ -8,7 +8,7 @@ to solve the problem.
 A distributed system is a model in which processes running on running different
 computers, which are connected together in a network, exchange messages to coordinate
 their action, often resulting in the user thinking of the entire system as one single
-unified computer. A computer in the distibuted system is also alternatively referred to as a
+unified computer. A computer in the distributed system is also alternatively referred to as a
 processor or a node in the system. Each node in a distributed systems has its
 own memory.
 
@@ -21,9 +21,9 @@ An asynchronous distributed system is one where there are no guarantees about th
 timing and order in which events occur.
 The clocks of each of the process in the system can be out of sync and may not be
 accurate. Therefore, there can be no guarantees about the order in which events occur.
-Further, messages sent by one process to another can be delayed for an arbitary period of time.
+Further, messages sent by one process to another can be delayed for an arbitrary period of time.
 
-A protocol running in an asynchronous enviroment has to account for these conditions
+A protocol running in an asynchronous environment has to account for these conditions
 in its design and try to achieve its goal without the guarantees of timed events.
 An asynchronous environment is very common for a real world distributed system but
 it also makes reasoning about the system harder because of the aforementioned properties.
@@ -31,8 +31,8 @@ it also makes reasoning about the system harder because of the aforementioned pr
 \subsection{Fault Tolerance}
 A fault tolerant distributed system is one which can continue to function correctly
 despite the failure of some of its components. A 'failure' of a node or 'fault' in a node
-means any unexpected behaviour from that node eg. not responding to messages, sending
-corrupted messages.
+means any unexpected behaviour from that node, for example, not responding to messages
+or sending corrupted messages.
 
 Fault tolerance is one of the main reasons for using a distributed system as it
 increases the chances of your application continuing to functioning correctly and
@@ -40,13 +40,13 @@ makes it more dependable. As Netflix mention on their blog
 'Fault Tolerance is a Requirement, Not a Feature' \cite{20}.
 %% Reference https://medium.com/netflix-techblog/fault-tolerance-in-a-high-volume-distributed-system-91ab4faae74a
 With their Netflix API receiving more than 1 billion requests a day, they expect
-that it is guaranteed that some of the components of their distributed system will fail.
+that it is guaranteed that some of the nodes in their distributed system will fail.
 Using a fault tolerant distributed system they are able to ensure that a small failure
-in some components doesn't hinder the performance of the overall system, hence,
+in some nodes doesn't hinder the performance of the overall system, hence,
 enabling them to achieve their uptime metrics.
 
 Fault tolerant distributed system protocols are protocols which achieve their
-goals despite the failure of some of the components of the distributed system they run on.
+goals despite the failure of some of the nodes of the distributed system they run on.
 The protocol accounts for the failures and generally specifies the maximum number of
 failures and the types of failures it can handle before it stops functioning correctly.
 
@@ -57,12 +57,12 @@ For a client server model, the easiest way to implement it is to use one single 
 which handles all the client request. Obviously this isn't the most robust solution
 as if the single server fails, so does your service. To overcome the problem you
 use a collection of servers each of which is a replica of the original single server and
-ensure that each of these `replicas' fails independantly, without effecting the other replicas.
+ensure that each of these `replicas' fails independently, without effecting the other replicas.
 This adds more fault tolerance.
 
 State Machine Replication is method for creating a fault tolerant distributed system
 by replicating servers and using protocols to coordinate the interactions of these
-replicated servers with the client. Fred B. \cite{1} points out how to use
+replicated servers with the client. Schneider \cite{1} points out how to use
 state machine replication to implement fault tolerant services.
 
 A State Machine $M$ can be defined as $M = \langle q_0, Q, I, O, \delta, \gamma \rangle$ where \\
@@ -92,7 +92,7 @@ we can successfully return a response to the client.
 
 \subsection{Byzantine Fault Tolerance}
 Byzantine fault tolerance is the most general form of fault tolerance in which
-any arbitary form of failure should be defended against. This failure might not
+any arbitrary form of failure should be defended against. This failure might not
 just be a node crashing or but could also be some node producing inconsistent
 output or having corrupted state. A node with a Byzantine fault might also behave
 `maliciously', for example, by sending different responses for the same question to
@@ -100,7 +100,7 @@ different nodes, or it might present itself as failed to some nodes and as funct
 to others. It might do this to prevent the distributed algorithm from functioning
 correctly.
 
-The term comes from the `Byzantine Generals Problem' by Laport et al \cite{3}
+The term comes from the `Byzantine Generals Problem' by Lamport et al \cite{3}
 in which a set of nodes must decide on a course of action, but at the same time
 some of the nodes are `malfunctioning' and give `conflicting information to
 different parts of the system'.
@@ -111,34 +111,36 @@ This leads to the problem of making all these replicas agree with each other
 to keep them consistent. Consensus protocols try to solve this problem.
 
 \begin{quote}
-Consensus protocols are the family of distibuted systems protocols which aim to
+Consensus protocols are the family of distributed systems protocols which aim to
 make a distributed network of processes agree on one result.
 \end{quote}
 
 These protocols are of interest because of their numerous real world applications.
 Let us take the example of a distributed database, which is a critical part of almost
 all large scale real world applications. This distributed database will run
-over a network of computers and everytime you use the database you aren't guaranteed
+over a network of computers and every time you use the database you aren't guaranteed
 to be served by the same computer.
 
-Suppose you add a file to the database. This action is performed by the processor that
-was handling your `add' request. Later when you want to retrieve the file from the database
-you might be served by a different computer that did not perform the `add' request. Inorder
-for the new computer to know that the file exists in the database, you will need to use a
-consensus protocol which helps all the computers in the network (which handle user
-requests) agree upon the result that the file has been added to the database.
+Suppose you add a file to the database. This action is performed by a node, in
+the distributed database, that was handling your `add' request.
+Later when you want to retrieve the file from the database
+you might be served by a different node in the distributed database
+that did not perform the `add' request. In order
+for the new node to know that the file exists in the system, you will need to use a
+consensus protocol which helps all the nodes in the system (which handle user
+requests) to agree upon the result that the file has been added to the system.
 
 A popular consensus protocol is the blockchain consensus protocol which powers Bitcoin.
-George P. and Ilya S. \cite{5} have verified a subset of this protocol in Coq. Other
+P\^irlea et al \cite{5} have verified a subset of this protocol in Coq. Other
 examples of consensus protocols are Raft \cite{12}, Stellar Consensus Protocol \cite{13}
-and Paxos \cite{14}, which we will now look at.
+and Paxos \cite{14}, which we look at next.
 
 
 \section{Paxos}
 Having understood the the main concepts behind distributed system protocols, we can
 now finally get to the protocol at the heart of this project. Paxos is a family of
 asynchronous, fault tolerant, consensus protocol which achieves consensus in a network
-of unrealiable processes as long as a majority of them don't fail. Paxos was
+of unreliable processes as long as a majority of them don't fail. Paxos was
 outlined in Lamport's 1998 paper, `Part Time Parliament' \cite{4}.
 
 Paxos is used for state machine replication. Once you have multiple replicas
@@ -149,30 +151,30 @@ software. It has been used at Google to build a fault tolerate database \cite{11
 and the Chubby \cite{12} lock service.
 
 Paxos has many variants but the one we will focus on is the one we actually prove
-in Disel, single decree Paxos, also know as simple paxos. Simple Paxos is an algorithm
+in Disel, single decree Paxos, also know as simple Paxos. Simple Paxos is an algorithm
 that helps a distributed network of processors to achieve consensus.
 Consensus is achieved when the network of processor agree on a common value.
 
-For simple paxos, we assume the following assumptions hold about the processors
+For simple Paxos, we assume the following assumptions hold about the processors
 and the environment, in order for the protocol to function correctly.
 \begin{itemize}
-  \item Processors communicate between each other by exchanging asynchronous messages between each other.
+  \item Processors communicate between each other by exchanging asynchronous messages between them.
   \item Processors run at an arbitrary speed and may fail or restart. Handling this relates
-    to the fault tolerant nature of paxos. Also, we assume that Byzantine faults don't occur.
+    to the fault tolerant nature of Paxos. Also, we assume that Byzantine faults don't occur.
     This means that all processors actually work together to try to achieve consensus on a value.
-    There are variants of paxos which can also handle Byzantine failure buy not simple paxos.
+    There are variants of Paxos which can also handle Byzantine failure buy not simple Paxos.
     (This can be linked to the 'Practical Byzantine Fault Tolerance' paper, by Castro et al \cite{2},
     which states that any algorithm handling
-    Byzantine faults must have three phases. Simple paxos only has two phases.)
+    Byzantine faults must have three phases. Simple Paxos only has two phases.)
 \end{itemize}
 
-As for fault tolerance of paxos, in order to handle a failure of upto $f$ processors,
+As for fault tolerance of Paxos, in order to handle a failure of upto $f$ processors,
 we need to have a minimum $2f + 1$ processors participating in the algorithm. This
-means paxos functions correctly as long as a majority of the processors in the
-network do not fail. We will see shortly why just a majority needs to function
+means Paxos functions correctly as long as a majority of the processors in the
+network do not fail. We will see shortly why just a majority needs to be functioning
 correctly.
 
-A processor participating in simple paxos, may have one or more of these three
+A processor participating in simple Paxos, may have one or more of these three
 different roles - proposer, acceptor or learner.
 \begin{itemize}
   \item \textbf{Proposer} - A process acting as a proposer listens for client
@@ -182,10 +184,10 @@ different roles - proposer, acceptor or learner.
     For a proposed value to be accepted, a majority of all the existing acceptors
     have to accept the proposed value.
   \item \textbf{Learner} - The learner has to be informed when an acceptor accepts a value.
-    The learner can then figure out when consensus has been achieved by calculating
+    The learner can then figure out when consensus has been achieved by monitoring
     when a majority of acceptors have accepted the same proposal.
-    Once the acceptors agree on a value, the learner may act on the value
-    eg. Send request to client informing them about the agreed value.
+    Once the acceptors agree on a value, the learner may act on the value by,
+    for example, sending a request to the client informing them about the agreed value.
 \end{itemize}
 
 \vspace{-4mm}
@@ -194,9 +196,11 @@ For passing around the value to be chosen from one processor to the other,
 a processor must send a 'proposal' to the other processor.
 You can think of a proposal as just a tuple $\langle n, v \rangle$.
 $n$ is just a natural number associated with a proposal which makes
-it easy to keep track of all the different proposals.
+it easy to keep track of all the different proposals and $v$ is the value
+the value that is being proposed.
 
-A \texttt{quorum} of acceptors is a subset of the set of all acceptors with length greater
+A \texttt{quorum} of acceptors is a subset of the set of all acceptors
+and has a length greater
 than $N / 2$ where $N$ is the length of the set of acceptors. A \texttt{quorum} is just
 a set denoting a majority of all the available acceptors.
 
@@ -206,8 +210,8 @@ Consensus is achieved when a proposal is accepted by a majority of acceptors.
 
 \vspace{-4mm}
 \subsubsection{The Algorithm}
-Simple paxos runs in rounds until consensus is achieved (a successful round
-has occurred, where a majority of acceptors have accepted a proposal).
+Simple Paxos runs in rounds until consensus is achieved (a successful round
+occurs when a majority of acceptors accept a proposal).
 A successful round of the algorithm has two phases, each of which can
 be subdivided into parts a, b.
 
@@ -216,7 +220,8 @@ be subdivided into parts a, b.
     A proposer sends a proposal
     $\langle n, v \rangle$ to each acceptor in any randomly chosen \texttt{quorum} of acceptors.
     This first message that the proposer sends out is called a \texttt{prepare request}.
-    As it the proposer tries to 'prepare' the acceptors to 'accept' a value in the future.
+    This phase can be thought of as the proposer trying to
+    `prepare' the acceptors to `accept' a value in the future.
   \item \textbf{Phase 1b: Promise Response.}
     An acceptor on receiving a prepare request, responds with a \texttt{promise response},
     if and only if the acceptor has not already sent a promise response with
@@ -224,18 +229,18 @@ be subdivided into parts a, b.
 
     A promise response for proposal $\langle n, v \rangle$ is basically a
     guarantee (a 'promise') that this acceptor will not respond to any
-    messages with proposals that have a proposal number $n'$ where $n' < n$.
+    messages with proposals that have a proposal number $n'$ where $n' <= n$.
 
-    Thus, if an incoming prepare request has proposal number less than what the
+    Thus, if an incoming prepare request has proposal number that is not
+    greater than what the
     acceptor has already promised earlier, then the acceptor can ignore this
     prepare request by not responding to it. Although, for speeding up the
     protocol, the acceptor can send out a \texttt{nack response} which tells the
     proposer to stop trying to achieve consensus with this proposal.
 
-    If the acceptor has not sent any promise response before, then the body of
-    the promise response can be empty, otherwise the acceptor must include the
-    last proposal that it promised (before the current one) in the body of the
-    message.
+    If the acceptor has not already accepted a proposal, then the body of
+    the promise response can be empty, otherwise, the acceptor must include in it the
+    last proposal that it accepted.
   \item \textbf{Phase 2b: Accept Request.}
     If the proposer successfully receives promise responses from a majority of
     acceptors, then it can send out an \texttt{accept request}. A accept request is
@@ -251,9 +256,9 @@ be subdivided into parts a, b.
     The proposer then sends this accept request with proposal $\langle n, v' \rangle$
     to another \texttt{quorum} of acceptors.
   \item \textbf{Phase 2b: Accepted Response.}
-    Any acceptor that receives the accept request with proposal $\langle n, v \rangle$
+    Any acceptor that receives the accept request with proposal $\langle n, v \rangle$,
     responds with an accepted response if and only if it hasn't already promised
-    not to respond to any proposals with proposal number $n'$ where $n' > n$.
+    not to respond to any proposals with proposal number $n'$ where $n' >= n$.
 \end{itemize}
 
 \vspace{-4mm}
@@ -263,7 +268,7 @@ have agreed on a value. There are various ways to do this.
 
 \begin{enumerate}
   \item Whenever an acceptor accepts a value, it should send the accepted proposal
-    to all the learners. The learner will then know when a majority of acceptors
+    to all the learners. The learners will then know when a majority of acceptors
     have accepted the same value.
   \item We can have a distinguished learner which informs other learners about
     the choose value. The acceptors only need to inform this particular learner
@@ -277,20 +282,22 @@ have agreed on a value. There are various ways to do this.
 \end{enumerate}
 
 \section{Disel}
+Having learnt the concepts behind distributed systems and the Paxos protocol, we
+can now look at Disel.
 Disel \cite{9} is a verification framework, built on top of the Coq theorem prover,
 that enables one to prove the safety properties of a distributed protocol by
 breaking down the protocol into its state space invariants and its atomic properties.
 The unique aspect of Disel is that it also allows one to combine these separate
 verified protocols to create a complete verified system. Additionally, the
 code extraction properties of Disel enables one to extract the verified runnable
-OCaml code for the protocols which can be combined with an shim which supplies
-the implementation of the various primite operations like sending or receiving
+OCaml code for the protocols which can be combined with an shim that supplies
+the implementation of the various primitive operations like sending or receiving
 a message.
 
 \subsection{Protocol Encoding}
 We will now look at how Disel requires the state space of a protocol to be encoded in it.
-The figure \ref{fig:DiselStateSpace} shows the distributed state space and also the world
-components.
+The figure \ref{fig:DiselStateSpace} shows the distributed state space and the world
+components in Disel.
 
 \begin{figure}
 \centering
@@ -299,14 +306,18 @@ components.
 \label{fig:DiselStateSpace}}
 \end{figure}
 
-% The Disel paper \cite{9} defines the global system state as follows.
-% ``Each global system state $s$ is a finite partial mapping from protocol labels
-% $l \in \mathrm{\texttt{Lab}}$ to statelets. Each statelet represents a
-% protocol-specific component, consisting of a `message soup' \texttt{MS} and a per-node
-% local state (\texttt{DistLocState}).''
+As you can see from \ref{fig:DiselStateSpace},
+A \texttt{statelet} is a component in the protocol and consists of the \texttt{MessageSoup}
+and the \texttt{DistLocState}. A message soup is `finite partial map from unique message
+identifiers to messages,
+each of which carries its sender and recipient node ids, the payload $m$, which
+includes a tag, and a boolean indicating whether the message is already received
+or not yet' \cite{9}. While the local state of a node
+`maps each node id into protocol-specific piece of local state, represented as a
+mapping from locations (isomorphic to natural numbers) to specific values' \cite{9}.
 
-As you can see from \ref{fig:DiselStateSpace}, a protocol $P$ in Disel is defined as a tuple
-of the \texttt{Coherence}, the set of send transitions and the set of recieve transitions.
+Additionally, a protocol $P$ in Disel is defined as a tuple
+of the \texttt{Coherence}, the set of send transitions and the set of receive transitions.
 Let us now look at each of these components in detail.
 
 A \texttt{Coherence} is a function that takes in a statelet and returns a proposition
@@ -317,14 +328,16 @@ A transition is defined as a tuple of consisting of the following:
 \begin{enumerate}
   \item Tag - a unique natural number identifier for the message to be sent in the transition.
   \item Precondition - The constraints that are imposed on identity of the sender of the message,
-    identity of the reciever is, the message that is being sent and on the local state of
+    identity of the receiver is, the message that is being sent and on the local state of
     the sender/receiver (depending on whether it is a send transition/receive transition).
-  \item Step function - Describes how the local state of the sender/reciever changes after
+  \item Step function - Describes how the local state of the sender/receiver changes after
     making the transition.
 \end{enumerate}
 
 You can see in the code example below how the step function and pre condition
-are encoded for sending the prepare request in Paxos.
+are encoded for sending the \texttt{prepare request} in Paxos. \texttt{PInit},
+\texttt{PSentPrep} and \texttt{PWaitPrepResp} are various states the
+proposer can be in.
 
 \begin{lstlisting}
 (* Changes in the Node state triggered upon send *)
@@ -365,16 +378,13 @@ Program Definition send_prepare_req psal to :=
 \end{lstlisting}
 
 The \texttt{tryrecv\_action\_wrapper} is similar but the main difference is that in
-a received transition, we may received messages from any of the multiple protocols
+a received transition, we may receive messages from any of the multiple protocols
 that might be executing at the time. To address this problem, we need to check the
 tag $t$ returned by the receive wrapper and ensure that this tag belongs to the
 protocol that was specified in the wrapper. In the code example below, we check
 that the received message is either a \texttt{promise\_resp} or a \texttt{nack\_resp}
-both of which belong to the \texttt{paxos} protocol and are valid reponses to a
+both of which belong to the \texttt{paxos} protocol and are valid responses to a
 \texttt{prepare\_req}.
-If an incoming message matches the conditions specified, the wrapper returns
-\texttt{Some(from, m)} where $m$ is the message and $from$ is the sender. Otherwise
-it returns \texttt{None}.
 
 \begin{lstlisting}
 (* Non blocking receive *)
@@ -383,10 +393,14 @@ Program Definition tryrecv_prepare_resp := act (@tryrecv_action_wrapper W p
       (fun k _ t b => (k == l) && ((t == promise_resp) || (t == nack_resp))) _).
 \end{lstlisting}
 
+If an incoming message matches the conditions specified, the wrapper returns
+\texttt{Some(from, m)} where $m$ is the message and $from$ is the sender. Otherwise
+it returns \texttt{None}.
+
 These low level primitives can then be combined together for specifying the roles
 of each node in the protocol. We can use the \texttt{send\_prepare\_req} to
 come up with \texttt{send\_prepare\_req\_loop} which every proposer performs when
-it starts up. These functions can then futher be combined together to give the
+it starts up. These functions can then further be combined together to give the
 entire implementation of a node. \texttt{proposer\_round} below is the program
 that each node acting a proposer executes.
 
@@ -438,7 +452,7 @@ always true, in all of the system’s reachable states.' \cite{21}.
 The problem with using just an invariant like $x > 2$ is that, you may assume
 that the invariant holds before the execution of the program, but you still
 do not have a guarantee that this invariant will hold during and after the
-execution of the program, i.e. in any state of the program.
+execution of the program, i.e. hold in any state of the program.
 
 Therefore, we need to make our invariants $inductive$. An inductive invariant
 of a program, is an invariant which if it holds in a particular state $s$ of the
