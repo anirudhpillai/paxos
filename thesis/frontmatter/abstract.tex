@@ -1,6 +1,18 @@
-Distributed systems are notoriously hard to reason about.
-This project aims to implement a library of reusable verified distributed components,
-based on the classical family of fault-tolerant asynchronous Paxos-like consensus protocol.
-The project will use Disel, a framework for compositional verification of distributed
-protocols built on top of the Coq proof assistant, to verify correctness of the
-implemented components.
+Distributed systems have become an integral component of the modern world.
+Most of these system power application with over a million users and, thus,
+the importance of correctly implementing such systems, that keeps them up and
+running and functioning correctly, has never been greater.
+Despite their widespread use, building correctly functioning distributed systems
+has remained a notoriously hard challenge.
+
+In this project we use Disel, a framework for $compositional$ verification
+of distributed systems. Recent work has yielded tools that support building
+verified implementations of the core components of a distributed system, yet,
+Disel goes beyond them by enabling one to combine
+the verified implementations of the core components to produce a
+correct implementation of the entire distributed system.
+This project aims to use Disel to implement a library of reusable
+verified distributed components, based on the classical family of
+fault-tolerant asynchronous Paxos-like consensus protocol, in which
+a number of participant are supposed to reach
+an agreement despite the possible failure of a minority of them.

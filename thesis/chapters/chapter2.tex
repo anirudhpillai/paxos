@@ -30,14 +30,14 @@ it also makes reasoning about the system harder because of the aforementioned pr
 
 \subsection{Fault Tolerance}
 A fault tolerant distributed system is one which can continue to function correctly
-despite the failure of some of its components. A 'failure' of a node or 'fault' in a node
+despite the failure of some of its components. A `failure' of a node or `fault' in a node
 means any unexpected behaviour from that node, for example, not responding to messages
 or sending corrupted messages.
 
 Fault tolerance is one of the main reasons for using a distributed system as it
 increases the chances of your application continuing to functioning correctly and
 makes it more dependable. As Netflix mention on their blog
-'Fault Tolerance is a Requirement, Not a Feature' \cite{20}.
+`Fault Tolerance is a Requirement, Not a Feature' \cite{20}.
 %% Reference https://medium.com/netflix-techblog/fault-tolerance-in-a-high-volume-distributed-system-91ab4faae74a
 With their Netflix API receiving more than 1 billion requests a day, they expect
 that it is guaranteed that some of the nodes in their distributed system will fail.
@@ -60,12 +60,12 @@ use a collection of servers each of which is a replica of the original single se
 ensure that each of these `replicas' fails independently, without effecting the other replicas.
 This adds more fault tolerance.
 
-State Machine Replication is method for creating a fault tolerant distributed system
+State machine replication is method for creating a fault tolerant distributed system
 by replicating servers and using protocols to coordinate the interactions of these
 replicated servers with the client. Schneider \cite{1} points out how to use
 state machine replication to implement fault tolerant services.
 
-A State Machine $M$ can be defined as $M = \langle q_0, Q, I, O, \delta, \gamma \rangle$ where \\
+A state machine $M$ can be defined as $M = \langle q_0, Q, I, O, \delta, \gamma \rangle$ where \\
 $q_0$ is the starting state \\
 $Q$ is the set of all possible states. \\
 $I$ is set of all valid inputs \\
@@ -284,6 +284,7 @@ have agreed on a value. There are various ways to do this.
     reliability but also increases the number of messages exchanged.
 \end{enumerate}
 
+\vspace{-5mm}
 \section{Disel}
 Having learnt the concepts behind distributed systems and the Paxos protocol, we
 can now look at Disel.
@@ -309,8 +310,8 @@ components in Disel.
 \label{fig:DiselStateSpace}}
 \end{figure}
 
-As you can see from \ref{fig:DiselStateSpace},
-A \texttt{statelet} is a component in the protocol and consists of the \texttt{MessageSoup}
+As you can see from \ref{fig:DiselStateSpace}, a \texttt{statelet} is a component
+in the protocol and consists of the \texttt{MessageSoup}
 and the \texttt{DistLocState}. A message soup is `finite partial map from unique message
 identifiers to messages,
 each of which carries its sender and recipient node ids, the payload $m$, which
@@ -339,7 +340,7 @@ A transition is defined as a tuple of consisting of the following:
 
 You can see in the code example below how the step function and pre condition
 are encoded for sending the \texttt{prepare request} in Paxos. \texttt{PInit},
-\texttt{PSentPrep} and \texttt{PWaitPrepResp} are various states the
+\texttt{PSentPrep} and \texttt{PWaitPrepResp} are some states the
 proposer can be in.
 
 \begin{lstlisting}
