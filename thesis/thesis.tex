@@ -2,8 +2,13 @@
 
 \usepackage{listings}
 \input{lstcoq}
-% \lstset{basicstyle=\footnotesize\ttfamily,breaklines=true}
 \lstset{style=Coq}
+
+\lstdefinestyle{SourceCodeListing}{
+    basicstyle=\tiny\ttfamily,
+    breaklines=true,
+    breakautoindent=true
+}
 
 \usepackage[numbers]{natbib}
 \usepackage{multicol}
@@ -21,8 +26,7 @@
 
 \maketitle
 \abstractpage
-% \dedicationpage
-% \acknowledgments
+\acknowledgments
 \tableofcontents
 
 \setstretch{\dnormalspacing}
@@ -40,7 +44,6 @@
 \bibliographystyle{IEEEtranN}
 \bibliography{references}
 \addcontentsline{toc}{chapter}{References}
-% \bibliographystyle{apalike2}
 
 \begin{appendices}
     \include{chapters/appendixA}

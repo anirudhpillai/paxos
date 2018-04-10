@@ -1,1 +1,1685 @@
+\newgeometry{top=2cm, left=1cm, right=1cm, bottom=2cm}
+\begin{landscape}
+
 \chapter{Disel Proof Code Listing}
+
+\section{PaxosProtocol.v}
+\begin{multicols*}{2}
+\begin{lstlisting}[style=SourceCodeListing]
+From mathcomp.ssreflect
+Require Import ssreflect ssrbool ssrnat eqtype ssrfun seq.
+From mathcomp
+Require Import path.
+Require Import Eqdep.
+Require Import Relation_Operators.
+From DiSeL.Heaps
+Require Import pred prelude idynamic ordtype finmap pcm unionmap heap coding domain.
+From DiSeL.Core
+Require Import Freshness State EqTypeX DepMaps Protocols Worlds NetworkSem Rely.
+From DiSeL.Core
+Require Import Actions Injection Process Always HoareTriples InferenceRules.
+
+Set Implicit Arguments.
+Unset Strict Implicit.
+Import Prenex Implicits.
+
+
+Module PaxosProtocol.
+
+
+Module States.
+
+
+Definition nid := nat.
+
+(* seq of two elements p_no, p_val *)
+Definition proposal := seq nat.
+(* Promise -> seq (node * promise/nack * accepted_proposal) *)
+Definition promises := seq (nid * bool * proposal).
+
+(* States of the nodes *)
+Inductive RoleState :=
+(* Proposer States *)
+(* Initialised with a proposal (p_no * p_val) *)
+| PInit of proposal
+(* Sent prepare message to some Acceptors at a current stage *)
+(* seq nid holds nodes which were sent the message *)
+| PSentPrep of seq nid & proposal
+(* Received promises/NACKs from Acceptors *)
+| PWaitPrepResp of promises & proposal
+(* Send AcceptRequest *)
+| PSentAccReq of seq nid & proposal
+(* Finished executing after sending AccReq or not receiving majority*)
+| PAbort
+(* Acceptor states *)
+| AInit
+(* Holds the highest number promised in the proposal *)
+| APromised of proposal
+(* Holds the highest number proposal accepted *)
+| AAccepted of proposal.
+
+(* Pointer to the state *)
+Definition st := ptr_nat 1.
+
+(* Pairing with the current stage of type nat *)
+Definition StateT := (nat * RoleState)%type.
+
+
+End States.
+
+Import States.
+
+Section PaxosProtocol.
+
+(* Proposer nodes *)
+Variable proposers : seq nid.
+(* Acceptor nodes *)
+Variable acceptors : seq nid.
+(* Involved nodes *)
+Definition nodes := proposers ++ acceptors.
+
+
+Definition prepare_req : nat := 0.
+Definition promise_resp : nat := 1.
+Definition nack_resp : nat := 2.
+Definition accept_req : nat := 3.
+
+
+Definition ttag := nat.
+
+Definition tags : seq ttag :=
+  [:: prepare_req; promise_resp; nack_resp; accept_req].
+
+
+(*** Defining Coherence ***)
+
+(**
+Coherence predicate defines the shape of the statelet.
+i.e. it components of the local state and message soup properties.
+Therefore, we need to write coherence functions for both the
+local state and message soup and then combine them to create PaxosCoh.
+ *)
+
+
+(** localCoh constraints the local state of each node. **)
+Definition localCoh (n : nid) : Pred heap :=
+  [Pred h | valid h /\ exists (s : StateT), h = st :-> s].
+
+Definition tagFromNode (t : nat) : bool :=
+  (t \in [:: prepare_req; accept_req; promise_resp; nack_resp]).
+
+Definition msgFromNode (tms : TaggedMessage) (y : nat) : Prop :=
+  let: body := tms_cont tms in exists data, body = y :: data.
+
+Definition cohMsg (ms: msg TaggedMessage) (y : nat) : Prop := True.
+
+(** Coherence for the message soup. *)
+Definition soupCoh : Pred soup :=
+  [Pred s | valid s /\
+            forall m ms, find m s = Some ms -> exists y, cohMsg ms y].
+
+Definition paxos_coh d : Prop :=
+  let: dl := dstate d in
+  let: ds := dsoup d in
+  [/\ soupCoh ds, dom dl =i nodes,
+   valid dl &
+   forall n, n \in nodes -> localCoh n (getLocal n d)].
+
+(* Axioms of the coherence predicate *)
+Lemma l1 d: paxos_coh d -> valid (dstate d).
+Proof. by case. Qed.
+
+Lemma l2 d: paxos_coh d -> valid (dsoup d).
+Proof. by case; case. Qed.
+
+Lemma l3 d: paxos_coh d -> dom (dstate d) =i nodes.
+Proof. by case. Qed.
+
+(* Wrapping up the coherence predicate *)
+Definition PaxosCoh := CohPred (CohPredMixin l1 l2 l3).
+
+Lemma send_soupCoh d m :
+    soupCoh (dsoup d) -> (exists y, cohMsg m y) -> soupCoh (post_msg (dsoup d) m).1.
+Proof.
+  move=>[H1 H2][y]Cm; split=>[|i ms/=]; first by rewrite valid_fresh.
+  rewrite findUnL; last by rewrite valid_fresh.
+  case: ifP=>E; first by move/H2.
+    by move/um_findPt_inv=>[Z G]; subst i m; exists y.
+Qed.
+
+Lemma trans_updDom this d s :
+  this \in nodes -> PaxosCoh d -> dom (upd this s (dstate d)) =i nodes.
+Proof.
+  move=>D C z; rewrite -(cohDom C) domU inE/=.
+    by case: ifP=>///eqP->{z}; rewrite (cohDom C) D; apply: cohVl C.
+Qed.
+
+Lemma cohSt n d (C : PaxosCoh d) s:
+  find st (getLocal n d) = Some s ->
+  idyn_tp s = StateT.
+Proof.
+case: (C)=> _ _ _ G; case H: (n \in nodes).
+- by move: (G _ H); case=>V'[s']->; rewrite hfindPt//=; case=><-.
+rewrite /getLocal; rewrite -(cohDom C) in H.
+by case: dom_find H=>//->; rewrite find0E.
+Qed.
+
+Definition getSt n d (C : PaxosCoh d) : StateT :=
+  match find st (getLocal n d) as f return _ = f -> _ with
+  | Some v => fun epf => icoerce id (idyn_val v) (cohSt C epf)
+  | _ => fun epf => (0, AInit)
+  end (erefl _).
+
+Lemma locCn n d (C : PaxosCoh d):
+  n \in nodes ->
+  valid (getLocal n d) /\
+  exists (s : StateT), getLocal n d = st :-> s.
+Proof.
+by case: C=>_ _ _ /(_ n)G; move: G; rewrite /localCoh/=.
+Qed.
+
+Lemma getStK n d (C : PaxosCoh d)  s :
+  getLocal n d = st :-> s -> getSt n C = s.
+Proof.
+move=>E; rewrite /getSt/=.
+move: (cohSt C); rewrite !E/==>H.
+by apply: ieqc.
+Qed.
+
+Lemma getStE n i j C C' (pf : n \in nodes) :
+  getLocal n j = getLocal n i -> @getSt n j C' = @getSt n i C.
+Proof.
+case: {-1}(C)=>_ _ _/(_ _ pf).
+move=>[V][s][E]E'.
+rewrite (getStK C E).
+by apply: getStK; rewrite E'.
+Qed.
+
+Lemma getStE' l i j pf pf' n:
+  getLocal n (getStatelet j l) = getLocal n (getStatelet i l) ->
+  @getSt n (getStatelet j l) pf' = @getSt n (getStatelet i l) pf.
+Proof.
+Admitted.
+
+(*** State Transitions ***)
+Definition fst' (tup: (nat * bool * proposal)%type): nat :=
+  match tup with
+  | (x, b, props) => x
+  end.
+
+Definition snd' (tup: (nat * bool * proposal)%type): bool :=
+  match tup with
+  | (x, b, props) => b
+  end.
+
+Fixpoint find_highest_numbered_promise (max_so_far: proposal) (xs: promises):
+  proposal :=
+  match xs with
+  | cons (_, check, p) rest =>
+    if check && (head 0 p > head 0 max_so_far)
+    then find_highest_numbered_promise p rest
+    else find_highest_numbered_promise max_so_far rest
+  | _ => max_so_far
+  end.
+
+(* Choose value of highest numbered proposal received from acceptors *)
+Fixpoint create_proposal_for_acc_req (xs: promises) (p: proposal): proposal :=
+  (* All promises received *)
+  if (all (fun i => i) (map snd' xs))
+  then
+    let: max_proposal := find_highest_numbered_promise [:: 0; 0] xs in
+    if perm_eq max_proposal [:: 0; 0]
+    then p
+    else [:: (head 0 p); (last 0 max_proposal)]
+  else [:: 0; 0].
+
+(**
+Step Functions
+
+Step function dictactes how the state of the node changes
+after performing the send/receive transitions.
+*)
+
+(**
+Send Transitions:
+- Proposer: sPrep, sAccReq
+- Acceptor: sPromise, sNack
+*)
+
+(* Changes in the Node state triggered upon send *)
+Definition step_send (s: StateT) (to : nid) (p: proposal): StateT :=
+    let: (e, rs) := s in
+    match rs with
+    | PInit p' =>
+      if acceptors == [:: to] (* if only one acceptor *)
+      then (e, PWaitPrepResp [::] p')
+      else (e, PSentPrep [:: to] p')
+    | PSentPrep tos p' =>
+      if perm_eq (to :: tos) acceptors
+      (* If all prepare reqs sent *)
+      then (e, PWaitPrepResp [::] p') (* switch to the receiving state *)
+      else (e, PSentPrep (to :: tos) p') (* Keep sending *)
+    | PSentAccReq tos p' =>
+      if perm_eq (to :: tos) acceptors
+      (* If all accept reqs sent *)
+      then (e, PAbort)
+      else (e, PSentAccReq (to :: tos) p') (* Keep sending *)
+    | _ => (e, rs)
+    end.
+
+(**
+Receive Transitions:
+- Proposer: rPromise, rNack
+- Acceptor: rPrep, rAccReq
+ *)
+
+Definition payload := proposal.
+
+(* Changes in the Node state triggered upon receive *)
+Definition step_recv (s : StateT) (from : nid) (mtag : ttag) (mbody : payload):
+  StateT :=
+  let: (e, rs) := s in
+  let: p_no := head 0 mbody in
+  let: p_val := last 0 mbody in
+  match rs with
+  | PWaitPrepResp recv_promises p' =>
+    if (from \in (map fst' recv_promises)) (* If duplicate *)
+    then s (* then ignore *)
+    else if mtag == nack_resp
+         then (e, PAbort) (* Abort if we see nack *)
+         else
+           let: r_promises := (from, mtag == promise_resp, mbody) :: recv_promises in
+           (* if all promises received, we know we don't have nacks *)
+           if (perm_eq (map fst' r_promises) acceptors)
+           then let: new_p := create_proposal_for_acc_req r_promises p' in
+                (e, PSentAccReq [::] new_p)
+           else (e, PWaitPrepResp r_promises p') (* keep waiting for promises *)
+  | AInit => (* Promise/Accept first received transition *)
+    if mtag == prepare_req
+    then (e, APromised mbody)
+    else (e, AAccepted mbody)
+  | APromised p' =>
+      let: curr_p_no := head 0 p' in
+      let: curr_p_val := last 0 p' in
+      if mtag == prepare_req
+      then if p_no > curr_p_no (* If received higher number *)
+           (* Update promised number by storing new proposal *)
+           then (e, APromised mbody)
+           else (e, APromised p')
+      else (* It's an accept request *)
+           if p_no > curr_p_no (* If received higher number *)
+           then (e, AAccepted mbody) (* Accept the proposal *)
+           else (e, APromised p') (* we'll send nack *)
+  | _ => s
+  end.
+
+(*
+There should be 4 send-transitions for the node:
+- send-prepare-request
+- send-accept-request
+- send-promise
+- send-nack
+
+There should be 4 receive-transitions for the node:
+- receive-promise
+- receive-nack
+- receive-prepare-request
+- receive-accept-request
+ *)
+
+Section GenericSendTransitions.
+
+Notation coh := PaxosCoh.
+
+Definition Hin this to := (this \in nodes /\ to \in nodes).
+Definition mkLocal {T} (sl : T) := st :-> sl.
+Check mkLocal.
+
+Variable ptag : ttag.
+
+(* Precondition -- this is the way one can define multiple send-transitions *)
+Variable prec : StateT -> payload -> Prop.
+
+Hypothesis node_prec_safe :
+  forall this to s m,
+    Hin this to -> prec s m -> cohMsg (Msg (TMsg ptag m) this to true) s.1.
+
+(* Making sure that the precondition is legit *)
+Lemma this_in this to : Hin this to -> this \in nodes.
+Proof.
+  by case.
+Qed.
+
+Definition node_safe (this n : nid)
+           (d : dstatelet) (msg : payload) :=
+  Hin this n /\
+  exists (Hp : Hin this n) (C : coh d), prec (getSt this C) msg.
+
+Lemma node_safe_coh this to d m : node_safe this to d m -> coh d.
+Proof.
+  case.
+  move => in_nodes.
+  case.
+  move => in_nodes2.
+  case => coh_d H_coh_d => //.
+Qed.
+
+Lemma node_safe_in this to d m : node_safe this to d m ->
+                               this \in nodes /\ to \in nodes.
+Proof.
+  case.
+  move => Hin e_clause => //.
+Qed.
+
+Definition node_step (this to : nid) (d : dstatelet)
+           (msg : payload)
+           (pf : node_safe this to d msg) :=
+  let C := node_safe_coh pf in
+  let s := getSt this C in
+  Some (mkLocal (step_send s to msg)).
+
+Lemma node_step_coh : s_step_coh_t coh ptag node_step.
+Proof.
+  move=>this to d msg pf h[]->{h}.
+  have C : (coh d) by case: pf=>?[?][].
+  split=>/=.
+  - apply: send_soupCoh; first by case:(node_safe_coh pf).
+    exists (getSt this C).1.
+    case: (pf)=> H[C']P /=. move: (conj H P)=>pf'.
+    move: P.
+    case => H2 P.
+    move: (node_prec_safe H P). rewrite (proof_irrelevance C H2)/=. done.
+  - by apply: trans_updDom=>//; case: (node_safe_in pf).
+  - by rewrite validU; apply: cohVl C.
+  move=>n Ni. rewrite /localCoh/=.
+  rewrite /getLocal/=findU; case: ifP=>B; last by case: C=>_ _ _/(_ n Ni).
+  move/eqP: B=>Z; subst n=>/=.
+  rewrite (cohVl C)/=; split=>//.
+  move: (step_send _ _ _)=>ps.
+  rewrite ?hvalidPtUn//; last by eexists _.
+Qed.
+
+Lemma node_safe_def this to d msg :
+      node_safe this to d msg <->
+      exists b pf, @node_step this to d msg pf = Some b.
+Proof.
+  split=>[pf/=|]; last by case=>?[].
+  set b := let C := node_safe_coh pf in
+         let s := getSt this C in
+         mkLocal (step_send s to msg).
+  by exists b, pf.
+Qed.
+
+Definition node_send_trans :=
+  SendTrans node_safe_coh node_safe_in node_safe_def node_step_coh.
+
+End GenericSendTransitions.
+
+Section SendTransitions.
+
+(* Send prepare request transition *)
+Definition send_prepare_req_prec (p: StateT) (m: payload) :=
+  (exists n psal, p = (n, PInit psal)) \/
+  (exists n tos psal, p = (n, PSentPrep tos psal)).
+
+Program Definition send_prepare_req_trans : send_trans PaxosCoh :=
+  @node_send_trans prepare_req send_prepare_req_prec _.
+Next Obligation.
+  by rewrite /cohMsg.
+Qed.
+
+(* Send accept request transition *)
+Definition send_accept_req_prec (p: StateT) (m: payload) :=
+  (exists n psal, p = (n, PSentAccReq [::] psal)).
+
+Program Definition send_accept_req_trans : send_trans PaxosCoh :=
+  @node_send_trans accept_req send_accept_req_prec _.
+Next Obligation.
+  by rewrite /cohMsg.
+Qed.
+
+(* Send promise response transition *)
+Definition send_promise_resp_prec (p: StateT) (m: payload) :=
+  (exists n, p = (n, AInit)) \/ (exists n psal, p = (n, APromised psal)).
+
+Program Definition send_promise_resp_trans : send_trans PaxosCoh :=
+  @node_send_trans promise_resp send_promise_resp_prec _.
+Next Obligation.
+  by rewrite /cohMsg.
+Qed.
+
+(* Send nack response transition *)
+Definition send_nack_resp_prec (p: StateT) (m: payload) :=
+  exists n psal, p = (n, APromised psal).
+
+Program Definition send_nack_resp_trans : send_trans PaxosCoh :=
+  @node_send_trans nack_resp send_nack_resp_prec _.
+Next Obligation.
+  by rewrite /cohMsg.
+Qed.
+
+End SendTransitions.
+
+Section GenericReceiveTransitions.
+
+Notation coh := PaxosCoh.
+
+Variable r_tag : ttag.
+Variable r_wf : forall d, coh d -> nid -> nid -> pred payload.
+
+Definition r_step : receive_step_t coh :=
+  fun this (from : nid) (m : proposal) d (pf : coh d) (pt : this \in nodes) =>
+    let s := getSt this pf in
+    mkLocal (step_recv s from r_tag m).
+
+Lemma r_step_coh : r_step_coh_t r_wf r_tag r_step.
+Proof.
+  move=>d from this m C pf tms D F Wf T/=.
+  rewrite /r_step; case X: (this \in nodes); last first.
+  admit.
+Admitted.
+
+Definition recv_trans := ReceiveTrans r_step_coh.
+
+End GenericReceiveTransitions.
+
+Section ReceiveTransitions.
+
+Definition msg_wf d (_ : PaxosCoh d) (this from : nid) :=
+  [pred p : payload | true].
+
+(* Got prepare request *)
+Definition receive_prepare_req_trans := recv_trans prepare_req msg_wf.
+
+(* Got accept request *)
+Definition receive_accept_req_trans := recv_trans accept_req msg_wf.
+
+(* Got promise response *)
+Definition receive_promise_resp_trans := recv_trans promise_resp msg_wf.
+
+(* Got nack response *)
+Definition receive_nack_resp_trans := recv_trans nack_resp msg_wf.
+
+End ReceiveTransitions.
+
+
+Section Protocol.
+
+(* Putting it all together *)
+Variable l : Label.
+
+(* All send-transitions *)
+Definition paxos_sends :=
+  [::
+     send_prepare_req_trans;
+     send_accept_req_trans;
+     send_promise_resp_trans;
+     send_nack_resp_trans
+  ].
+
+(* All receive-transitions *)
+Definition paxos_receives :=
+  [::
+     receive_prepare_req_trans;
+     receive_accept_req_trans;
+     receive_promise_resp_trans;
+     receive_nack_resp_trans
+  ].
+
+Program Definition PaxosProtocol : protocol :=
+  @Protocol _ l _ paxos_sends paxos_receives _ _.
+
+End Protocol.
+End PaxosProtocol.
+
+Module Exports.
+Section Exports.
+
+Definition PaxosProtocol := PaxosProtocol.
+
+Definition send_prepare_req_trans := send_prepare_req_trans.
+Definition send_accept_req_trans := send_accept_req_trans.
+Definition send_promise_resp_trans := send_promise_resp_trans.
+Definition send_nack_resp_trans := send_nack_resp_trans.
+
+Definition receive_prepare_req_trans := receive_prepare_req_trans.
+Definition receive_accept_req_trans := receive_accept_req_trans.
+Definition receive_promise_resp_trans := receive_promise_resp_trans.
+Definition receive_nack_resp_trans := receive_nack_resp_trans.
+
+(* Paxos Tags *)
+Definition prepare_req := prepare_req.
+Definition accept_req := accept_req.
+Definition promise_resp := promise_resp.
+Definition nack_resp := nack_resp.
+
+(* Getter *)
+Definition getSt := getSt.
+
+End Exports.
+End Exports.
+
+End PaxosProtocol.
+
+Export PaxosProtocol.States.
+Export PaxosProtocol.Exports.
+\end{lstlisting}
+\end{multicols*}
+
+\newpage
+
+\section{PaxosProposer.v}
+\begin{multicols*}{2}
+\begin{lstlisting}[style=SourceCodeListing]
+From mathcomp.ssreflect
+Require Import ssreflect ssrbool ssrnat eqtype ssrfun seq.
+From mathcomp
+Require Import path.
+Require Import Eqdep.
+Require Import Relation_Operators.
+From DiSeL.Heaps
+Require Import pred prelude idynamic ordtype finmap pcm unionmap heap coding domain.
+From DiSeL.Core
+Require Import Freshness State EqTypeX DepMaps Protocols Worlds NetworkSem Rely.
+From DiSeL.Core
+Require Import Actions Injection Process Always HoareTriples InferenceRules.
+From DiSeL.Core
+Require Import InductiveInv While.
+From DiSeL.Examples
+Require Import PaxosProtocol.
+
+
+Module PaxosProposer.
+Section PaxosProposer.
+
+Variable l : Label.
+Variables (proposers: seq nid) (acceptors: seq nid).
+Variable p: nid.
+
+Hypothesis AcceptorsNonEmpty : acceptors != [::].
+
+Check PaxosProtocol.
+
+Definition paxos := PaxosProtocol proposers acceptors l.
+Notation W := (mkWorld paxos).
+
+Section ProposerImplementation.
+
+(************** Atomic actions **************)
+
+(* Two send-actions, e -- id of the current era *)
+Program Definition send_prepare_req psal to :=
+  act (@send_action_wrapper W paxos p l (prEq paxos)
+       (send_prepare_req_trans proposers acceptors) _ psal to).
+Next Obligation.
+  by rewrite InE; do![left|right].
+Qed.
+
+Program Definition send_accept_req psal to :=
+  act (@send_action_wrapper W paxos p l (prEq paxos)
+       (send_accept_req_trans proposers acceptors) _ psal to).
+Next Obligation.
+  by rewrite !InE; right; left.
+Qed.
+
+
+(* Two receive-actions *)
+Program Definition tryrecv_prepare_resp := act (@tryrecv_action_wrapper W p
+      (* filter *)
+      (fun k _ t b => (k == l) && ((t == promise_resp) || (t == nack_resp))) _).
+Next Obligation.
+  by case/andP: H=>/eqP->_; rewrite /ddom gen_domPt inE/=.
+Qed.
+
+
+(************** Proposer code **************)
+
+(*** Reading internal state ***)
+Implicit Arguments PaxosProtocol.PaxosCoh [proposers acceptors].
+Notation coh := (@PaxosProtocol.PaxosCoh proposers acceptors).
+Notation getS s := (getStatelet s l).
+Notation loc i := (getLocal p (getStatelet i l)).
+
+Export PaxosProtocol.
+
+Program Definition read_round:
+  {(s: StateT)}, DHT [p, W]
+  (fun i => loc i = st :-> s,
+   fun r m => loc m = st :-> s /\
+              exists (pf : coh (getS m)), r = (getSt p pf).1) :=
+  Do (act (@skip_action_wrapper W p l paxos (prEq paxos) _
+                                (fun s pf => (getSt p pf).1))).
+Next Obligation.
+  apply: ghC.
+  move => s st s_is_st s_in_coh_w.
+  apply: act_rule => j R.
+  split => [|r k m].
+    by case: (rely_coh R).
+  case=>/=H1[Cj]Z.
+  subst j=>->R'.
+  split; first by rewrite (rely_loc' l R') (rely_loc' _ R).
+  case: (rely_coh R')=>_; case=>_ _ _ _/(_ l)=>/= pf; rewrite prEq in pf.
+  exists pf; move: (rely_loc' l R') =>/sym E'.
+  suff X: getSt p (Actions.safe_local (prEq paxos) H1) = getSt p pf by rewrite X.
+  by apply: (getStE' pf _ E').
+Qed.
+
+(*******************************************)
+(***   Sending out proposals in a loop   ***)
+(*******************************************)
+
+Definition send_prepare_req_loop_spec (e : nat) := forall to_send,
+  {(pinit: proposal)}, DHT [p, W]
+  (fun i =>
+     loc i = st :-> (e, PInit pinit) /\
+     (perm_eq acceptors to_send \/
+     if to_send == [::]
+     then loc i = st :-> (e, PWaitPrepResp [::] pinit)
+     else exists (acptrs : seq nid),
+         loc i = st :-> (e, PSentPrep acptrs pinit) /\
+         perm_eq acceptors (acptrs ++ to_send)),
+     fun r m => r = tt /\ loc m = st :-> (e, PWaitPrepResp [::] pinit)).
+
+Program Definition send_prepare_req_loop e (psal: proposal):
+  {(pinit: proposal)}, DHT [p, W]
+  (fun i => loc i = st :-> (e, PInit pinit),
+   fun r m => r = tt /\
+              loc m = st :-> (e, PWaitPrepResp [::] pinit)) :=
+  Do (ffix (fun (rec : send_prepare_req_loop_spec e) to_send =>
+              Do (match to_send with
+                  | to :: tos => send_prepare_req psal to ;; rec tos
+                  | [::] => ret _ _ tt
+                  end)) acceptors).
+Next Obligation.
+  apply: ghC => i1 p'.
+  case=>[[E1 P1 C1]].
+  case: (to_send)=>[|x xs]; last first.
+  apply: step; apply: act_rule => j1 R1/=; split=>[|r k m[Sf]St R2].
+  split=>//=; first by case: (rely_coh R1).
+  rewrite /node_safe.
+  split.
+  split.
+  admit. (* what does p \in nodes proposers acceptors mean? *)
+  admit.
+  split.
+  admit. (* again Hin *)
+  rewrite /send_prepare_req_prec.
+  admit. (* Where do I get coherence from *)
+  (* because of inE *)
+  (* + rewrite /Actions.can_send /nodes inE eqxx andbC/=. *)
+  (*   by rewrite -(cohD (proj2 (rely_coh R1)))/ddom gen_domPt inE/=. *)
+  admit.
+  by rewrite /Actions.filter_hooks um_filt0=>???/sym/find_some; rewrite dom0 inE.
+  admit.
+  admit.
+Admitted.
+Next Obligation.
+  apply:ghC=>i lg E1 _; apply: (gh_ex (g:=lg)).
+  apply: call_rule=>C1. split => //. by left. done.
+Qed.
+
+(*******************************************)
+(*** Receiving responses to the proposal ***)
+(*******************************************)
+
+(* Ending condition *)
+Definition rc_prepare_resp_cond (recv_promises : promises) :=
+  ~~ perm_eq (map fst' recv_promises) acceptors.
+
+(* Invariant relates the argument and the shape of the state *)
+Definition rc_prepare_resp_inv (e : nat) (psal: proposal): cont (promises) :=
+  fun acc i => loc i = st :-> (e, PWaitPrepResp acc psal).
+
+Program Definition receive_prepare_resp_loop (e : nat):
+  {(pinit : proposal)}, DHT [p, W]
+  (fun i => loc i = st :-> (e, PWaitPrepResp [::] pinit),
+   fun res m =>
+       loc m = st :-> (e, PWaitPrepResp res pinit) /\
+       (perm_eq (map fst' res) acceptors))
+  :=
+  Do _ (@while p W _ _ rc_prepare_resp_cond (rc_prepare_resp_inv e) _
+        (fun recv_promises => Do _ (
+           r <-- tryrecv_prepare_resp;
+           match r with
+           | Some (from, tg, body) =>
+             if (from \in acceptors) && (from \notin (map fst' recv_promises))
+             then ret _ _ ((from, tg == promise_resp, body) :: recv_promises)
+             else ret _ _ recv_promises
+           | None => ret _ _ recv_promises
+           end
+        )) [::]).
+Next Obligation.
+  by apply: with_spec x.
+Defined.
+Next Obligation.
+  by move:H; rewrite /rc_prepare_resp_inv (rely_loc' _ H0).
+Qed.
+Next Obligation.
+  move => i [psal] /= [H1 I1].
+  apply: step.
+  apply: act_rule=>j R1/=; split; first by case: (rely_coh R1).
+  case=>[[[from tg] body] k m|k m]; last first.
+  - case=>Sf []Cj[]H; last by case: H=>[?][?][?][?][?][?][].
+    have E: k = j by case: H.
+    move: H. subst k=>_ R2. apply: ret_rule.
+    move => m' R3.
+    move => x [] cond.
+    rewrite /rc_prepare_resp_inv.
+    by rewrite -(rely_loc' _ R1)-(rely_loc' _ R2)-(rely_loc' _ R3).
+  case=>Sf []Cj[]=>[|[l'][mid][tms][from'][rt][pf][][E]Hin E1 Hw/=]; first by case.
+  case/andP=>/eqP Z G->{k}[]Z1 Z2 Z3 R2; subst l' from' tg body.
+  move: rt pf (coh_s (w:=W) l (s:=j) Cj) Hin R2 E1 Hw G E; rewrite prEq/=.
+  move=>rt pf Cj' Hin R E1 Hw G E.
+  have D: rt = receive_prepare_req_trans _ _.
+  - case: Hin G=>/=; first by intuition.
+  admit.
+  admit.
+Admitted.
+Next Obligation.
+  apply: ghC=>i pinit E1 C1.
+  have Pre: rc_prepare_resp_inv e pinit [::] i by rewrite /rc_prepare_resp_inv/= E1.
+  apply: call_rule'=>[|acc m]; first by exists pinit.
+  case/(_ pinit Pre)=>/=H1 H2 Cm; split=>//;  by move/negbNE: H1.
+Qed.
+
+Definition read_res (st : StateT) :=
+  let: (_, rs) := st in
+  match rs with
+  | PWaitPrepResp res _ => res
+  | _ => [::]
+  end.
+
+(*******************************************)
+(***    Sending accept requests          ***)
+(*******************************************)
+
+Definition send_accept_req_loop_spec (e : nat) psal := forall to_send,
+  {(pinit: proposal)}, DHT [p, W]
+  (fun i =>
+     (exists res,
+         [/\ loc i = st :-> (e, PWaitPrepResp res pinit),
+         to_send = acceptors &
+         perm_eq (map fst' res) acceptors]) \/
+      if to_send == [::]
+      then loc i = st :-> (e, PAbort)
+      else exists (acptrs : seq nid),
+        loc i = st :-> (e, PSentAccReq acptrs psal) /\
+        perm_eq acceptors (acptrs ++ to_send),
+   fun (r : unit) m => loc m = st :-> (e, PAbort)).
+   (* Aborts after sending all accept requests *)
+
+Program Definition send_accept_req_loop e psal: send_accept_req_loop_spec e psal :=
+  fun to_send  =>
+    Do (fix rec to_send :=
+          (match to_send with
+           | to :: tos => send_accept_req psal to ;; rec tos
+           | [::] => ret _ _ tt
+           end)) to_send.
+Next Obligation.
+  apply: ghC=>s1 psal' E1 C1; elim: to_send s1 E1 C1=>//=.
+  - move=>s1; case; first by case=>?[]_ Z; rewrite -Z in (AcceptorsNonEmpty).
+    move => E1 _. apply: ret_rule=>i2 R. by rewrite (rely_loc' _ R).
+  move=>to tos Hi s1 H C1.
+  apply: step; apply: act_rule=>s2 R2/=.
+  have Pre: Actions.send_act_safe W (p:=paxos) p l
+          (send_accept_req_trans proposers acceptors) [:: e] to s2.
+  - split; [by case: (rely_coh R2) | | |]; last first.
+    + by rewrite /Actions.filter_hooks um_filt0=>???/sym/find_some; rewrite dom0 inE.
+    (* Because of inE *)
+    (* + rewrite /Actions.can_send /nodes inE eqxx andbC/=. *)
+    (*     by rewrite -(cohD (proj2 (rely_coh R2)))/ddom gen_domPt inE/=. *)
+      admit.
+    case: (proj2 (rely_coh R2))=>_ _ _ _/(_ l); rewrite prEq=>C; split.
+    (* Because of inE *)
+    (* + split=>//; case: H; first by case=>?[_]<-; rewrite inE eqxx. *)
+    (*     by case=>ps[_]/perm_eq_mem->; rewrite mem_cat orbC inE eqxx.   *)
+    admit.
+  split.
+  admit. (* Because of Hin *)
+  admit. (* Don't know why this doesn't work *)
+
+
+  (* Postcondition *)
+  split => //.
+  admit. (* Actions.send_act_safe *)
+  move => body i3 i4[Sf]/=St R3.
+  apply: Hi; last by case: (rely_coh R3).
+  right; rewrite (rely_loc' _ R3).
+  admit.
+Admitted.
+
+Program Definition send_accept_reqs e psal:
+  {(pinit: proposal)}, DHT [p, W]
+  (fun i => exists recv_promises,
+         [/\ loc i = st :-> (e, PWaitPrepResp recv_promises pinit) &
+          perm_eq (map fst' recv_promises) acceptors],
+   fun (r : unit) m => loc m = st :-> (e, PAbort))
+  := Do (send_accept_req_loop e psal acceptors).
+Next Obligation.
+  apply: ghC=>i lg[res][H1]H2 H3 C; apply: (gh_ex (g:=lg)).
+  apply: call_rule=>//; first by move=>_; left; exists res.
+  done.
+Qed.
+
+Lemma equal_rounds (left_state: StateT) (right_state: StateT):
+  left_state = right_state -> fst left_state = fst right_state.
+Proof.
+  admit.
+Admitted.
+
+(*****************************************************)
+(*      Full Proposer Implementation                 *)
+(*****************************************************)
+Search _ (?X :-> _ = ?X :-> _).
+(* This is only ment to be run once for each proposer *)
+Program Definition proposer_round (p_init: proposal):
+  {(psal: proposal) (e : nat)}, DHT [p, W]
+  (fun i => loc i = st :-> (e, PInit psal),
+   fun (_: unit) m => loc m = st :-> (e, PAbort))
+  :=
+  Do (e <-- read_round;
+      send_prepare_req_loop e p_init;;
+      recv_promises <-- receive_prepare_resp_loop e;
+      send_accept_reqs e (create_proposal_for_acc_req recv_promises p_init);;
+      ret _ _ tt).
+Next Obligation.
+  move=>s0/=[psal [e]] E0. apply: step.
+  apply: (gh_ex (g := (e, PInit psal))).
+  apply: call_rule=>//e' s1 [E1][pf]->C1.
+  (* rewrite !(getStP_K _ E1)=>{e'}. *)
+  (* apply: step; apply: (gh_ex (g := psal)). *)
+  (* apply: call_rule=>//_ s2[_]/=E2 C2. *)
+  (* apply: step; apply: (gh_ex (g:=psal)). *)
+  (* apply: call_rule=>//res s3/= [E3 H3] C3. *)
+  (* - do![apply: step]; apply: (gh_ex (g:=psal)). *)
+  (*   apply: call_rule =>_. exists res. split => //. *)
+
+  (*   move => s4 E4 C4. *)
+  (*   apply: ret_rule => s5 R5 psal' e' E0'. *)
+  (*   rewrite E0 in E0'. *)
+
+    (* rewrite <- (equal_rounds _ _ (hcancelPtV _ E0')). *)
+    (* Found no subterm matching "(e', PInit psal').1" in the current goal. *)
+Admitted.
+
+End ProposerImplementation.
+End PaxosProposer.
+
+Module Exports.
+Section Exports.
+
+Definition proposer_round := proposer_round.
+
+End Exports.
+End Exports.
+
+End PaxosProposer.
+
+Export PaxosProposer.Exports.
+\end{lstlisting}
+\end{multicols*}
+
+\newpage
+
+\section{PaxosAcceptor.v}
+\begin{multicols*}{2}
+\begin{lstlisting}[style=SourceCodeListing]
+From mathcomp.ssreflect
+Require Import ssreflect ssrbool ssrnat eqtype ssrfun seq.
+From mathcomp
+Require Import path.
+Require Import Eqdep.
+Require Import Relation_Operators.
+From DiSeL.Heaps
+Require Import pred prelude idynamic ordtype finmap pcm unionmap heap coding domain.
+From DiSeL.Core
+Require Import Freshness State EqTypeX DepMaps Protocols Worlds NetworkSem Rely.
+From DiSeL.Core
+Require Import Actions Injection Process Always HoareTriples InferenceRules.
+From DiSeL.Core
+Require Import InductiveInv While.
+From DiSeL.Examples
+Require Import PaxosProtocol.
+
+
+Module PaxosAcceptor.
+Section PaxosAcceptor.
+
+Variable l : Label.
+Variables (proposers: seq nid) (acceptors: seq nid).
+
+Variable a: nid.
+
+
+Definition paxos := PaxosProtocol proposers acceptors l.
+Notation W := (mkWorld paxos).
+
+Section AcceptorImplementation.
+
+(************** Atomic actions **************)
+(* Two send-actions, e -- id of the current era *)
+Program Definition send_promise_resp psal to :=
+  act (@send_action_wrapper W paxos a l (prEq paxos)
+       (send_promise_resp_trans proposers acceptors) _ psal to).
+Next Obligation.
+  rewrite !InE. right. right. left. done.
+Qed.
+
+Program Definition send_nack_resp psal to :=
+  act (@send_action_wrapper W paxos a l (prEq paxos)
+       (send_nack_resp_trans proposers acceptors) _ psal to).
+Next Obligation.
+  rewrite !InE. right. right. right. done.
+Qed.
+
+
+(* Two receive-actions *)
+Program Definition tryrecv_prepare_req := act (@tryrecv_action_wrapper W a
+      (fun k _ t b => (k == l) && (t == prepare_req)) _).
+Next Obligation.
+  by case/andP: H=>/eqP->_; rewrite /ddom gen_domPt inE/=.
+Qed.
+
+Program Definition tryrecv_accept_req :=
+  act (@tryrecv_action_wrapper W a
+  (fun k _ t b => (k == l) && (t == accept_req)) _).
+Next Obligation.
+  by case/andP: H=>/eqP->_; rewrite /ddom gen_domPt inE/=.
+Qed.
+
+
+(************** Acceptor code **************)
+
+(*** Reading internal state ***)
+Implicit Arguments PaxosProtocol.PaxosCoh [proposers acceptors].
+Notation coh := (@PaxosProtocol.PaxosCoh proposers acceptors).
+Notation getS s := (getStatelet s l).
+Notation loc i := (getLocal a (getStatelet i l)).
+
+Export PaxosProtocol.
+
+Program Definition read_round:
+  {(s: StateT)}, DHT [a, W]
+  (fun i => loc i = st :-> s,
+   fun r m => loc m = st :-> s /\
+              exists (pf : coh (getS m)), r = (getSt a pf).1) :=
+  Do (act (@skip_action_wrapper W a l paxos (prEq paxos) _
+                                (fun s pf => (getSt a pf).1))).
+Next Obligation.
+  apply: ghC.
+  move => s st s_is_st s_in_coh_w.
+  apply: act_rule => j R.
+  split => [|r k m].
+    by case: (rely_coh R).
+  case=>/=H1[Cj]Z.
+  subst j=>->R'.
+  split; first by rewrite (rely_loc' l R') (rely_loc' _ R).
+  case: (rely_coh R')=>_; case=>_ _ _ _/(_ l)=>/= pf; rewrite prEq in pf.
+  exists pf; move: (rely_loc' l R') =>/sym E'.
+  suff X: getSt a (Actions.safe_local (prEq paxos) H1) = getSt a pf by rewrite X.
+    by apply: (getStE' pf _ E').
+Qed.
+
+Program Definition read_state:
+  {(s: StateT)}, DHT [a, W]
+  (fun i => loc i = st :-> s,
+   fun r m => loc m = st :-> s /\
+              exists (pf : coh (getS m)), r = (getSt a pf).2) :=
+  Do (act (@skip_action_wrapper W a l paxos (prEq paxos) _
+                                (fun s pf => (getSt a pf).2))).
+Next Obligation.
+  apply: ghC.
+  move => s st s_is_st s_in_coh_w.
+  apply: act_rule => j R.
+  split => [|r k m].
+    by case: (rely_coh R).
+  case=>/=H1[Cj]Z.
+  subst j=>->R'.
+  split; first by rewrite (rely_loc' l R') (rely_loc' _ R).
+  case: (rely_coh R')=>_; case=>_ _ _ _/(_ l)=>/= pf; rewrite prEq in pf.
+  exists pf; move: (rely_loc' l R') =>/sym E'.
+  suff X: getSt a (Actions.safe_local (prEq paxos) H1) = getSt a pf by rewrite X.
+  by apply: (getStE' pf _ E').
+Qed.
+
+(* Step 1: Receive prepare req *)
+
+(* Ending condition *)
+Definition r_prepare_req_cond (res : option proposal) := res == None.
+
+(* Invariant relates the argument and the shape of the state *)
+Definition r_prepare_req_inv (e : nat) (pinit: proposal): cont (option proposal) :=
+  fun res i =>
+    if res is Some psal
+    then loc i = st :-> (e, APromised psal)
+    else loc i = st :-> (e, AInit).
+
+(* Loops until it receives a prepare req *)
+Program Definition receive_prepare_req_loop (e : nat):
+  DHT [a, W]
+  (fun i => loc i = st :-> (e, AInit),
+   fun res m => exists psal, (res = Some psal) /\
+       (loc m = st :-> (e, APromised psal)))
+  :=
+  Do _ (@while a W _ _ r_prepare_req_cond (r_prepare_req_inv e) _
+        (fun _ => Do _ (
+           r <-- tryrecv_prepare_req;
+           match r with
+           | Some (from, tg, body) => ret _ _ (Some body)
+           | None => ret _ _ None
+           end
+        )) None).
+Next Obligation. by apply: with_spec x. Defined.
+Next Obligation. by move:H; rewrite /r_prepare_req_inv (rely_loc' _ H0). Qed.
+Next Obligation.
+  apply:ghC=>i1 psal[/eqP->{H}/=E1]C1; apply: step.
+  apply: act_rule=>i2/=R1; split; first by case: (rely_coh R1).
+  case=>[[[from e']d i3 i4]|i3 i4]; last first.
+  - case=>S/=[]?; case; last by case=>?[?][?][?][?][?][].
+    case=>_ _ Z; subst i3=>R2; apply: ret_rule=>i5 R4/=.
+    by rewrite (rely_loc' _ R4) (rely_loc' _ R2)(rely_loc' _ R1).
+  case=>Sf[]C2[]=>[|[l'][mid][tms][from'][rt][pf][][E]Hin E2 Hw/=]; first by case.
+  case/andP=>/eqP Z G->[]Z1 Z2 Z3 R2; subst l' from' e' d.
+  move: rt pf (coh_s (w:=W) l (s:=i2) C2) Hin R2 E2 Hw G E; rewrite prEq/=.
+  move=>rt pf Cj' Hin R E2 Hw G E.
+  have D: rt = receive_prepare_req_trans _ _.
+  - move: Hin G; by do! [case=>/=; first by move=>->].
+  subst rt=>{G}.
+  have P1: valid (dstate (getS i2))
+    by apply: (@cohVl _ coh); case: (Cj')=>P1 P2 P3 P4; split=>//=; done.
+  have P2: valid i2 by apply: (cohS (proj2 (rely_coh R1))).
+  have P3: l \in dom i2 by rewrite -(cohD (proj2 (rely_coh R1)))/ddom gen_domPt inE/=.
+
+  apply: ret_rule=>//i5 R4.
+  - rewrite /r_prepare_req_inv; rewrite (rely_loc' _ R4) (rely_loc' _ R) locE//=.
+    rewrite /PaxosProtocol.r_step /=.
+    rewrite -(rely_loc' _ R1) in E1.
+    rewrite (getStK _ E1).
+    by rewrite /step_recv /mkLocal.
+Qed.
+Next Obligation.
+  move => i1/= E1.
+  apply: (gh_ex (g:=([::0; 0]))).
+  apply: call_rule => //r i2 [H1]H2 C2.
+  rewrite /r_prepare_req_cond/r_prepare_req_inv in H1 H2.
+    by case: r H1 H2 => //p _; exists p.
+Qed.
+
+(* Finds the promised number from current state *)
+Definition read_promised_number (rs: RoleState): nat :=
+  match rs with
+  | APromised psal => head 0 psal
+  | _ => 0
+  end.
+
+Definition read_promised_value (rs: RoleState): nat :=
+  match rs with
+  | APromised psal => last 0 psal
+  | _ => 0
+  end.
+
+(* Step 2: Respond promise or nack to the proposer *)
+Program Definition resp_to_prepare_req (e: nat) (send_promise: bool) (prepare_no: nat)
+  (promised_no: nat) (promised_val: nat):
+  {(pif: (proposal * proposal))}, DHT [a, W]
+   (fun i => loc i = st :-> (e, APromised pif.1) \/ loc i = st :-> (e, AInit),
+    fun (_ : seq nat) m =>
+      if send_promise
+      then loc m = st :-> (e, APromised pif.2)
+      else loc m = st :-> (e, APromised pif.1))
+  := Do (rs <-- read_state;
+         if send_promise
+         then send_promise_resp [:: promised_no; promised_val] prepare_no
+         else send_nack_resp [:: 0; 0] prepare_no).
+Next Obligation.
+  apply:ghC=>i [pinit pfinal]E1 C1.
+  have Pre: forall i2 proposer_id, network_rely W a i i2 ->
+          Actions.send_act_safe W (p:=paxos) a l
+          (if send_promise
+           then send_promise_resp_trans proposers acceptors
+           else send_nack_resp_trans proposers acceptors)
+          [:: e] proposer_id i2.
+  - move=>i2 pid R1.
+    split; first by case: (rely_coh R1).
+    case: (proj2 (rely_coh R1))=>_ _ _ _/(_ l); rewrite (prEq paxos)=>C.
+    case: send_promise.
+    split => //.
+    admit.
+    rewrite /send_promise_resp_prec.
+    rewrite -(rely_loc' _ R1) in E1.
+    (* Need inE to work *)
+    (* + rewrite /Actions.can_send /nodes inE/= mem_cat Hpin orbC. *)
+    (* by rewrite -(cohD (proj2 (rely_coh R1)))/ddom gen_domPt inE/= eqxx. *)
+
+    (* by rewrite /Actions.filter_hooks um_filt0=>???/sym/find_some; rewrite dom0 inE. *)
+Admitted.
+
+
+(* Ending condition *)
+Definition r_acc_req_cond (res : option proposal) := res == None.
+
+(* Invariant relates the argument and the shape of the state *)
+Definition r_acc_req_inv (e : nat) (promised: bool) (promised_psal: proposal) (received_psal: proposal): cont (option proposal) :=
+  fun res i =>
+    if res is Some received_psal
+    then if promised
+           then if head 0 promised_psal < head 0 received_psal
+             then loc i = st :-> (e, AAccepted received_psal)
+             else loc i = st :-> (e, APromised promised_psal)
+         else loc i = st :-> (e, AAccepted received_psal)
+    else if promised
+         then loc i = st :-> (e, APromised promised_psal)
+         else loc i = st :-> (e, AInit).
+
+(* Loops until it receives a accept req *)
+Program Definition receive_acc_req_loop (e : nat) (promised: bool) (promised_psal: proposal):
+  {(pinit: proposal)}, DHT [a, W]
+   (fun i => if promised
+             then loc i = st :-> (e, APromised promised_psal)
+             else loc i = st :-> (e, AInit),
+  fun res m => exists psal, res = Some psal /\ (
+    loc m = st :-> (e, APromised promised_psal) \/
+    loc m = st :-> (e, AAccepted psal)
+  )) :=
+  Do _ (@while a W _ _ r_acc_req_cond (r_acc_req_inv e promised promised_psal) _
+        (fun _ => Do _ (
+           r <-- tryrecv_accept_req;
+           match r with
+           | Some (from, tg, body) => ret _ _ (Some body)
+           | None => ret _ _ None
+           end
+        )) None).
+Next Obligation. by apply: (with_spec x). Defined.
+Next Obligation. by move:H; rewrite /r_acc_req_inv (rely_loc' _ H0). Qed.
+Next Obligation.
+  apply:ghC=>i1 psal [/eqP->{H}/=E1]C1. apply: step.
+  apply: act_rule=>i2/=R1; split; first by case: (rely_coh R1).
+  case=>[[[from e']v i3 i4]|i3 i4]; last first.
+  - case=>S/=[]?; case; last by case=>?[?][?][?][?][?][].
+    case=>_ _ Z; subst i3=>R2; apply: ret_rule=>i5 R4/=.
+    rewrite /r_acc_req_inv/= in E1 *.
+    by rewrite (rely_loc' _ R4) (rely_loc' _ R2) (rely_loc' _ R1).
+  case=>Sf[]C2[]=>[|[l'][mid][tms][from'][rt][pf][][E]Hin E2 Hw/=]; first by case.
+  case/andP=>/eqP Z G->[]Z1 Z2 Z3 R2; subst l' from' e' v.
+  move: rt pf (coh_s (w:=W) l (s:=i2) C2) Hin R2 E2 Hw G E; rewrite prEq/=.
+  move=>rt pf Cj' Hin R E2 Hw G E.
+  have P1: valid (dstate (getS i2))
+    by apply: (@cohVl _ coh); case: (Cj')=>P1 P2 P3 P4; split=>//=; done.
+  have P2: valid i2 by apply: (cohS (proj2 (rely_coh R1))).
+  have P3: l \in dom i2 by rewrite-(cohD (proj2 (rely_coh R1)))/ddom gen_domPt inE/=.
+  have D: rt = receive_accept_req_trans _ _.
+  -  by move: Hin G; clear E1; do![case=>/=; first by move=>->].
+  apply: ret_rule=>//i5 R4.
+  - rewrite /r_acc_req_inv (rely_loc' _ R4) (rely_loc' _ R) locE//=.
+    case: (promised) E1 E2 D G=>/=E1 E2; case=>Z {E2}; subst rt=>//= _;
+    rewrite -(rely_loc' _ R1) in E1;
+    rewrite /r_step (getStK _ E1) /step_recv/= /mkLocal.
+    case: ifP=>G1; case: ifP => //; rewrite G1 => //.
+    done.
+Qed.
+Next Obligation.
+  apply: ghC=>i1 psal E1 C1/=.
+  apply: (gh_ex (g := psal)); apply: call_rule => //r i2 [H1]H2 C2.
+  rewrite /r_acc_req_cond/r_acc_req_inv in H1 H2; case: r H1 H2=>//b _ i2_AA.
+  exists b.
+  split => //.
+  move: i2_AA.
+  case: ifP=>G1 => //.
+  case: ifP=>G2.
+  by right.
+  by left.
+  by right.
+Qed.
+
+(* Using resp_to_prepare_req 0 as a 'do nothing' transition for now.
+As 0 will never be > 0 so the acceptor won't send a promise *)
+Program Definition acceptor_round:
+  {(ep: nat * proposal)}, DHT [a, W]
+  (fun i => loc i = st :-> (ep.1, AInit),
+   fun (_: unit) m => (
+     loc m = st :-> (ep.1, AInit) \/
+     loc m = st :-> (ep.1, APromised ep.2) \/
+     loc m = st :-> (ep.1, AAccepted ep.2)
+  )) :=
+     Do _ (e <-- read_round;
+          (* need to read state here as once it receives the message,
+             it already changes state *)
+          rs <-- read_state;
+          msg <-- receive_prepare_req_loop e;
+          (match msg with
+           | Some body =>
+             let: prepare_no := head 0 body in
+             let: promised_no := read_promised_number rs in
+             let: promised_val := read_promised_value rs in
+             resp_to_prepare_req e (promised_no < prepare_no)
+               prepare_no promised_no promised_val
+           | _  => resp_to_prepare_req e false 0 0 0 (* results in sending nack *)
+          end);;
+         rs <-- read_state;
+         (match rs with
+         (* It's in promised state *)
+         | APromised psal => receive_acc_req_loop e true psal
+         (* It hasn't promised anything *)
+         | _  => receive_acc_req_loop e false [:: 0; 0]
+         end);;
+         ret _ _ tt).
+Next Obligation.
+  apply: ghC => i1[e psal]/=E1 C1; apply: step.
+  apply: (gh_ex (g:=(e, AInit))); apply: call_rule=>//e' i2 [E2][pf]->C2.
+  apply: step.
+  apply: (gh_ex (g:=(e, AInit))). apply: call_rule=>//??[?]??.
+  apply: step.
+  apply: call_rule; last first.
+  move=>x? _ _. case: x=>a'. apply: step.
+  apply: (gh_ex (g:=([::], [::]))). apply: call_rule; last first.
+  move=>?? _ _. apply: step.
+  apply: (gh_ex (g:=(e, AInit))). apply: call_rule; last first.
+  move=>y ? _ _.
+  case: y=>//.
+Admitted.
+
+
+End AcceptorImplementation.
+End PaxosAcceptor.
+
+Module Exports.
+Section Exports.
+
+Definition acceptor_round := acceptor_round.
+
+End Exports.
+End Exports.
+
+End PaxosAcceptor.
+
+
+Export PaxosAcceptor.Exports.
+\end{lstlisting}
+\end{multicols*}
+
+\newpage
+
+\section{SimplePaxosApp.v}
+\begin{multicols*}{2}
+\begin{lstlisting}[style=SourceCodeListing]
+From mathcomp.ssreflect
+Require Import ssreflect ssrbool ssrnat eqtype ssrfun seq.
+From mathcomp
+Require Import path.
+Require Import Eqdep.
+Require Import Relation_Operators.
+From DiSeL.Heaps
+Require Import pred prelude ordtype finmap pcm unionmap heap coding domain.
+From DiSeL.Core
+Require Import State Protocols Worlds NetworkSem Rely.
+From DiSeL.Core
+Require Import HoareTriples InferenceRules While.
+From DiSeL.Examples
+Require Import PaxosProtocol PaxosProposer PaxosAcceptor.
+From DiSeL.Examples
+Require PaxosInductiveInv.
+
+Section SimplePaxosApp.
+
+(*
+
+A simple application to run on the shim implementation.
+
+Check for [Run] tags to find the initial state and the code for the
+proposers and the acceptors.
+
+*)
+
+Definition l := 0.
+(* Proposer nodes *)
+Definition p1 := 1.
+Definition p2 := 2.
+
+(* Acceptor nodes *)
+Definition a1 := 3.
+Definition a2 := 4.
+Definition a3 := 5.
+
+Definition proposers := [:: p1].
+Definition acceptors := [::a1; a2; a3].
+
+(* Necessary coherence facts *)
+Fact AcceptorsNonEmpty : acceptors != [::]. Proof. by []. Qed.
+
+(* Proposers *)
+Definition proposer p (pf: acceptors != [::]) psal:=
+  proposer_round l proposers acceptors p pf psal.
+
+(* Acceptors *)
+Program Definition acceptor a :=
+  acceptor_round l proposers acceptors a.
+
+(* Initial distributed state *)
+Definition st_ptr := PaxosProtocol.States.st.
+
+Definition init_heap_p psal:= st_ptr :-> (0, PInit psal).
+Definition init_heap_a := st_ptr :-> (0, AInit).
+
+Definition init_dstate :=
+  p1 \\-> init_heap_p [:: 1; 1] \+
+  a1 \\-> init_heap_a \+
+  a2 \\-> init_heap_a \+
+  a3 \\-> init_heap_a.
+
+Lemma valid_init_dstate : valid init_dstate.
+Proof.
+  admit.
+Admitted.
+
+Notation init_dstatelet := (DStatelet init_dstate Unit).
+
+(* [Run] Initial state to run *)
+Definition init_state : state := l \\-> init_dstatelet.
+
+
+(* Final Safety Facts *)
+Notation W := (mkWorld (PaxosProposer.paxos l proposers acceptors)).
+
+Lemma hook_complete_unit (c : context) : hook_complete (c, Unit).
+Proof. by move=>????; rewrite dom0 inE. Qed.
+
+Lemma hooks_consistent_unit (c : context) : hooks_consistent c Unit.
+Proof. by move=>????; rewrite dom0 inE. Qed.
+
+Lemma init_coh : init_state \In Coh W.
+Proof. admit. Admitted.
+
+(* [Run] Runnable proposer code *)
+Program Definition run_proposer p (AcceptorsNonEmpty: acceptors != [::]) psal:
+  DHT [p, _] (
+    fun i => network_rely W p init_state i,
+    fun _ m => exists (r : nat),
+    getLocal p (getStatelet m l) = st :-> (r, PInit psal))
+  := Do (with_inv (PaxosInductiveInv.ii _ _ _) (proposer p AcceptorsNonEmpty psal)).
+Next Obligation.
+  admit.
+Admitted.
+Check run_proposer.
+(* [Run] Runnable acceptor code *)
+Program Definition run_acceptor a:
+  DHT [a, _] (
+    fun i => network_rely W a init_state i,
+    fun _ m => exists (r : nat),
+    getLocal a (getStatelet m l) = st :-> (r, AInit))
+  := Do (with_inv (PaxosInductiveInv.ii _ _ _) (acceptor a)).
+Next Obligation.
+  admit.
+Admitted.
+
+Variables (psal_1 psal_2 : proposal).
+Variables (p_1 a_1 a_2 a_3: nat).
+(* [Run] Runnable nodes *)
+Program Definition run_proposer1 := run_proposer p1 AcceptorsNonEmpty psal_1.
+Program Definition run_proposer2 := run_proposer p2 AcceptorsNonEmpty psal_2.
+Program Definition run_acceptor1 := run_acceptor a_1.
+Program Definition run_acceptor2 := run_acceptor a_2.
+Program Definition run_acceptor3 := run_acceptor a_3.
+
+End SimplePaxosApp.
+
+(* [Run] Final programs to run with actual arguments supplied *)
+
+Definition p_runner1 (u : unit) := run_proposer1 [:: 1; 1].
+Definition p_runner2 (u : unit) := run_proposer1 [:: 2; 2].
+
+Definition a_runner1 (u : unit) := run_acceptor1 a1.
+Definition a_runner2 (u : unit) := run_acceptor2 a2.
+Definition a_runner3 (u : unit) := run_acceptor3 a3.
+\end{lstlisting}
+
+\section{PaxosExtraction.v}
+\begin{lstlisting}[style=SourceCodeListing]
+From DiSeL.Core
+Require Import DiSeLExtraction.
+From DiSeL.Examples
+Require Import SimplePaxosApp.
+
+Cd "extraction".
+  Cd "Paxos".
+    Separate Extraction DepMaps.DepMaps.dmap init_state p_runner1 p_runner2 a_runner1 a_runner2 a_runner3.
+  Cd "..".
+Cd "..".
+\end{lstlisting}
+\end{multicols*}
+
+\newpage
+
+\section{PaxosInductiveInv.v}
+\begin{multicols*}{2}
+\begin{lstlisting}[style=SourceCodeListing]
+From mathcomp.ssreflect
+Require Import ssreflect ssrbool ssrnat eqtype ssrfun seq.
+From mathcomp
+Require Import path.
+Require Import Eqdep.
+Require Import Relation_Operators.
+From DiSeL.Heaps
+Require Import pred prelude idynamic ordtype finmap pcm unionmap.
+From DiSeL.Heaps
+Require Import heap coding domain.
+From DiSeL.Core
+Require Import Freshness State EqTypeX Protocols Worlds NetworkSem Rely.
+From DiSeL.Core
+Require Import Actions Injection Process Always HoareTriples InferenceRules.
+From DiSeL.Core
+Require Import InductiveInv StatePredicates.
+From DiSeL.Examples
+Require Import PaxosProtocol.
+
+
+Set Implicit Arguments.
+Unset Strict Implicit.
+Import Prenex Implicits.
+
+Section PaxosInductiveInv.
+
+Variable l: Label.
+
+Variable (proposers: seq nid) (acceptors: seq nid).
+
+Definition paxos := PaxosProtocol proposers acceptors l.
+
+(* Take the transitions *)
+Notation sts := (snd_trans paxos).
+Notation rts := (rcv_trans paxos).
+
+Notation loc z d := (getLocal z d).
+
+Definition role_state (d: dstatelet) (s: StateT) (n: nid): Prop :=
+  loc n d = st :-> s.
+
+(*****************************************************)
+
+(* Phase Zero *)
+Definition EverythingInit (d : dstatelet) (round : nat): Prop :=
+  forall n, n \in (proposers ++ acceptors) -> (
+    (exists psal, role_state d (round, PInit psal) n)
+    \/ role_state d (round, AInit) n).
+
+
+(* Phase One *)
+Definition Phase1a (d: dstatelet) (round: nat) (n: nid): Prop :=
+  if n \in acceptors
+  then role_state d (round, AInit) n
+  else (
+    exists psal, (role_state d (round, PInit psal) n)
+    \/ (exists sent_to, role_state d (round, PSentPrep psal sent_to) n)
+    \/ (exists promises, role_state d (round, PWaitPrepResp promises psal) n)
+  ).
+
+Definition Phase1b (d: dstatelet) (round: nat) (n: nid): Prop :=
+  if n \in acceptors
+  then exists psal, role_state d (round, APromised psal) n
+  else exists psal,
+    exists promises, role_state d (round, PWaitPrepResp promises psal) n.
+
+Definition Phase2a (d: dstatelet) (round: nat) (n: nid): Prop :=
+  if n \in acceptors
+  then (
+    role_state d (round, PAbort) n
+    \/ exists psal, (role_state d (round, APromised psal) n)
+  )
+  else exists psal,
+    exists sent_to, role_state d (round, PSentAccReq sent_to psal) n.
+
+Definition Phase2b (d: dstatelet) (round: nat) (n: nid): Prop :=
+  if n \in acceptors
+  then exists psal, (
+    role_state d (round, AAccepted psal) n \/
+    forall a, a \in acceptors -> role_state d (round, AAccepted psal) a
+  )
+  else role_state d (round, PAbort) n.
+
+(* TODO: Fix the conditions. This Inv currently isn't checking for anything. *)
+Definition Inv (d: dstatelet) :=
+  exists round,
+    EverythingInit d round
+    \/ (forall n, n \in (proposers ++ acceptors) ->
+         (Phase1a d round n \/ Phase1b d round n
+          \/ Phase2a d round n \/ Phase2b d round n)).
+
+(*********************************************************)
+
+Notation Sinv := (@S_inv paxos (fun d _ => Inv d)).
+Notation Rinv := (@R_inv paxos (fun d _ => Inv d)).
+Notation coh d := (coh paxos d).
+Notation PI := proof_irrelevance.
+
+(*************************************************************)
+(*                  Send-transitions                         *)
+(*************************************************************)
+
+Program Definition s1: Sinv (send_prepare_req_trans proposers acceptors).
+Proof.
+  move=>this to d msg S h/= Hi/=[]T G.
+  case: (S)=>[][/eqP]Z H1[C]. exists to.
+
+  (* Init state *)
+  right.
+  left.
+  admit.
+Admitted.
+
+Program Definition s2: Sinv (send_accept_req_trans proposers acceptors).
+Proof.
+  move=>this to d msg S h/= Hi/=[]T G.
+  case: (S)=>[][/eqP]Z H1[C]. exists to.
+
+  (* Init state *)
+  right.
+  right.
+  left.
+  admit.
+Admitted.
+
+Program Definition s3: Sinv (send_promise_resp_trans proposers acceptors).
+Proof.
+  admit.
+Admitted.
+
+Program Definition s4: Sinv (send_nack_resp_trans proposers acceptors).
+Proof.
+  admit.
+Admitted.
+
+
+(*************************************************************)
+(*                  Receive-transitions                      *)
+(*************************************************************)
+
+Program Definition r1: Rinv (receive_prepare_req_trans proposers acceptors).
+Proof.
+  admit.
+Admitted.
+
+Program Definition r2: Rinv (receive_accept_req_trans proposers acceptors).
+Proof.
+  admit.
+Admitted.
+
+Program Definition r3: Rinv (receive_promise_resp_trans proposers acceptors).
+Proof.
+  admit.
+Admitted.
+
+Program Definition r4: Rinv (receive_nack_resp_trans proposers acceptors).
+Proof.
+  admit.
+Admitted.
+
+
+Definition sts' := [:: SI s1; SI s2; SI s3; SI s4].
+Definition rts' := [:: RI r1; RI r2; RI r3; RI r4].
+
+Program Definition ii := @ProtocolWithInvariant.II _ _ sts' rts' _ _.
+
+Definition paxos_with_inv := ProtocolWithIndInv ii.
+
+End PaxosInductiveInv.
+\end{lstlisting}
+
+\vfill
+
+\section{paxos.py}
+\begin{lstlisting}[style=SourceCodeListing, language=Python]
+#!/usr/bin/env python3
+
+import subprocess
+import re
+import time
+
+
+proposer1 = "(./PaxosMain.d.byte -me 1 -mode proposer 1 127.0.0.1 8000 2 127.0.0.1 8001 3 127.0.0.1 8002 4 127.0.0.1 8003 5 127.0.0.1 8004 &) > proposer1.log 2>&1"
+proposer2 = "(./PaxosMain.d.byte -me 2 -mode proposer 1 127.0.0.1 8000 2 127.0.0.1 8001 3 127.0.0.1 8002 4 127.0.0.1 8003 5 127.0.0.1 8004 &) > proposer2.log 2>&1"
+acceptor1 = "(./PaxosMain.d.byte -me 3 -mode acceptor 1 127.0.0.1 8000 2 127.0.0.1 8001 3 127.0.0.1 8002 4 127.0.0.1 8003 5 127.0.0.1 8004 &) > acceptor1.log 2>&1"
+acceptor2 = "(./PaxosMain.d.byte -me 4 -mode acceptor 1 127.0.0.1 8000 2 127.0.0.1 8001 3 127.0.0.1 8002 4 127.0.0.1 8003 5 127.0.0.1 8004 &) > acceptor2.log 2>&1"
+acceptor3 = "(./PaxosMain.d.byte -me 5 -mode acceptor 1 127.0.0.1 8000 2 127.0.0.1 8001 3 127.0.0.1 8002 4 127.0.0.1 8003 5 127.0.0.1 8004 &) > acceptor3.log 2>&1"
+
+a1 = subprocess.Popen(acceptor1, shell=True)
+a2 = subprocess.Popen(acceptor2, shell=True)
+a3 = subprocess.Popen(acceptor3, shell=True)
+p1 = subprocess.Popen(proposer1, shell=True)
+p2 = subprocess.Popen(proposer2, shell=True)
+
+consensus_achieved = True
+consensus_value = None
+
+exit_codes = [p.wait() for p in [a1, a2, a3]]
+print(exit_codes)
+
+# wait for processes to write to files
+time.sleep(2)
+
+for i in range(1, 4):
+    line = subprocess.check_output(['tail', '-1', "acceptor{0}.log".format(i)])
+    line = line.decode("utf-8")
+    print(line.rstrip())
+
+    pattern = r"got msg in protocol (\d) with tag = (\d), contents = \[(\d); (\d)\]"
+    match = re.match(pattern, line)
+
+    if not match or (consensus_value and consensus_value != match.group(4)):
+        print("Error in acceptor %d" % i)
+        consensus_achieved = False
+        break
+    else:
+        print("Acceptor %d accepted %s" % (i, match.group(4)))
+        consensus_value = match.group(4)
+
+print("=" * 40)
+
+if consensus_achieved:
+    print("\nConsesus achieved on value: %s" % consensus_value)
+else:
+    print("\nConsesus not achieved")
+\end{lstlisting}
+
+\end{multicols*}
+
+\end{landscape}
+\restoregeometry

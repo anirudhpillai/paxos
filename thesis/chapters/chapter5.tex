@@ -158,7 +158,7 @@ the acceptors.
 The previous steps helped setup a simple client application but the logs
 only show what happened at each individual node. Moreover, the important part is
 to find out when the entire system has achieved consensus, i.e. a majority of
-acceptors has accepted the same proposal.
+acceptors have accepted the same proposal.
 
 One way of making the client do this would be to go back to the Disel code and
 write the implementation of a learner and define an $accepted$ message that will
@@ -179,24 +179,23 @@ client application and also shows that the client application can be used in
 other applications where it provides a verified implementation of Paxos.
 
 
-\section{Verifying client in Disel}
-The code listing shows the spec for how an acceptor goes in a loop
-to receive a prepare request.
-%% TODO: Finish describing the verification part
-\begin{lstlisting}
-(* Loops until it receives a prepare req *)
-Program Definition receive_prepare_req_loop (e : nat):
-  DHT [a, W]
-  (fun i => loc i = st :-> (e, AInit),
-   fun res m => exists psal, (res = Some psal) /\
-       (loc m = st :-> (e, APromised psal)))
-  :=
-  Do _ (@while a W _ _ r_prepare_req_cond (r_prepare_req_inv e) _
-        (fun _ => Do _ (
-           r <-- tryrecv_prepare_req;
-           match r with
-           | Some (from, tg, body) => ret _ _ (Some body)
-           | None => ret _ _ None
-           end
-        )) None).
-\end{lstlisting}
+% \section{Verifying client in Disel}
+% The code listing shows the spec for how an acceptor goes in a loop
+% to receive a prepare request.
+% \begin{lstlisting}
+% (* Loops until it receives a prepare req *)
+% Program Definition receive_prepare_req_loop (e : nat):
+%   DHT [a, W]
+%   (fun i => loc i = st :-> (e, AInit),
+%    fun res m => exists psal, (res = Some psal) /\
+%        (loc m = st :-> (e, APromised psal)))
+%   :=
+%   Do _ (@while a W _ _ r_prepare_req_cond (r_prepare_req_inv e) _
+%         (fun _ => Do _ (
+%            r <-- tryrecv_prepare_req;
+%            match r with
+%            | Some (from, tg, body) => ret _ _ (Some body)
+%            | None => ret _ _ None
+%            end
+%         )) None).
+% \end{lstlisting}

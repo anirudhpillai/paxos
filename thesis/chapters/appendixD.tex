@@ -2,10 +2,10 @@
 \begin{landscape}
 
 \chapter{Simulator Code Listing}
-\begin{multicols*}{2}
 
 \section{paxos.py}
-\begin{lstlisting}[language=Python]
+\begin{multicols*}{2}
+\begin{lstlisting}[style=SourceCodeListing,language=Python]
 #!/usr/bin/env python3
 
 import os
@@ -74,12 +74,13 @@ def main():
 
 main()
 \end{lstlisting}
+\end{multicols*}
 
 \newpage
 
-\vspace{1cm}
+\begin{multicols*}{2}
 \section{paxos/process.py}
-\begin{lstlisting}[language=Python]
+\begin{lstlisting}[style=SourceCodeListing,language=Python]
 import multiprocessing
 import threading
 
@@ -115,11 +116,10 @@ class Process(threading.Thread):
         self.inbox.put(msg)
 \end{lstlisting}
 
-\newpage
+\vfill
 
-\vspace{1cm}
 \section{paxos/message.py}
-\begin{lstlisting}[language=Python]
+\begin{lstlisting}[style=SourceCodeListing,language=Python]
 """
 This file defines the Message super class and all the other
 types of messages used in the adapted Simple Paxos protocol.
@@ -169,7 +169,7 @@ class NackResponseMessage(Message):
 
 \section{paxos/proposer.py}
 \begin{multicols*}{2}
-\begin{lstlisting}[language=Python]
+\begin{lstlisting}[style=SourceCodeListing,language=Python]
 from .process import Process
 from .message import AcceptRequestMessage, PrepareRequestMessage, \
     PromiseResponseMessage, NackResponseMessage
@@ -249,7 +249,7 @@ class Proposer(Process):
 
 \section{paxos/acceptor.py}
 \begin{multicols*}{2}
-\begin{lstlisting}[language=Python]
+\begin{lstlisting}[style=SourceCodeListing,language=Python]
 from .process import Process
 from .message import AcceptRequestMessage, PrepareRequestMessage, \
     PromiseResponseMessage, NackResponseMessage
