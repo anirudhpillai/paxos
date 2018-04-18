@@ -102,7 +102,6 @@ a valid permutation of the set of acceptors.
 Furthermore, we also found a bug in our acceptor implementation. We came
 across it when we were not able to prove the post condition of \texttt{acceptor\_round}
 as the acceptor was never reaching the \texttt{AAccepted} state.
-
 The reason for this was because we when an acceptor receives an \texttt{accept\_request}
 we checked if the incoming proposal had a proposal number greater than the one
 currently held by the proposal, and only then move to the AAccepted state. The fact

@@ -9,11 +9,6 @@ frameworks to verify the implementation of the `smaller' sub-components
 but there still remains the problem of checking whether these smaller
 components, when combined together, achieve the desired goal.
 
-Disel is a framework for compositional verification of distributed
-protocols built on top of the Coq proof assistant. It allows one to verify
-the correctness of the implemented components and also to check whether
-the verified components function correctly when combined together.
-
 Another fundamental problem in the field of distributed computing is to make
 a set of process achieve consensus on something, for examples, the occurrence
 of an event or the decision to take some action. The set of distributed
@@ -21,6 +16,11 @@ computing protocols which tries to solve this problem are termed as
 consensus protocols. One of these protocols is the Paxos consensus protocol
 which has numerous variants according to the constraints imposed on the
 set of processes.
+
+Disel is a framework for compositional verification of distributed
+protocols built on top of the Coq proof assistant. It allows one to verify
+the correctness of the implemented components and also to check whether
+the verified components function correctly when combined together.
 
 This project involves using Disel to mechanise the proof of the Paxos consensus protocol.
 We will also be using the code extraction capabilities of Disel to

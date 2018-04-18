@@ -61,7 +61,7 @@
 % Text layout.
 \RequirePackage[width=5.75in, letterpaper]{geometry}
 \usepackage{ragged2e}
-\RaggedRight
+% \RaggedRight
 \RequirePackage{graphicx}
 \usepackage{fixltx2e}
 \parindent 12pt
@@ -87,7 +87,7 @@
 \setmonofont[Scale=MatchLowercase]{Source Code Pro}
 \RequirePackage[labelfont={bf,sf,footnotesize,singlespacing},
                 textfont={sf,footnotesize,singlespacing},
-                justification={justified,RaggedRight},
+                justification={justified},
                 singlelinecheck=false,
                 margin=0pt,
                 figurewithin=chapter,
