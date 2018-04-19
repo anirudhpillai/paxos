@@ -189,7 +189,7 @@
   \newgeometry{top=0cm}
   {
     \begin{figure}[t]
-      \hspace*{-3.33cm}
+      \hspace*{-3.30cm}
       \includegraphics[width=\paperwidth]{figures/ucl_logo.png}
     \end{figure}
   }

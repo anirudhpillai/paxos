@@ -3,6 +3,10 @@
 
 \chapter{Disel Proof Code Listing}
 
+The complete source code can be found at
+\href{https://github.com/anirudhpillai/disel}{https://github.com/anirudhpillai/disel}.
+
+\iffalse
 \section{PaxosProtocol.v}
 \begin{multicols*}{2}
 \begin{lstlisting}[style=SourceCodeListing]
@@ -33,7 +37,7 @@ Module States.
 Definition nid := nat.
 
 (* seq of two elements p_no, p_val *)
-Definition proposal := seq nat.
+Definition proposal := seq nat.https://github.com/anirudhpillai/disel
 (* Promise -> seq (node * promise/nack * accepted_proposal) *)
 Definition promises := seq (nid * bool * proposal).
 
@@ -1680,6 +1684,8 @@ else:
 \end{lstlisting}
 
 \end{multicols*}
+
+\fi
 
 \end{landscape}
 \restoregeometry

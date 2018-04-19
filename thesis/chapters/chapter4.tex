@@ -43,7 +43,7 @@ accepted a proposal and what proposal each of them has accepted. Thus, we can kn
 from the inductive invariant when consensus has been achieved by checking the values
 of each of the accepted proposals.
 
-Doing away with the learning phase also meant that we did not have to implement
+Getting read of the learning phase also meant that we did not have to implement
 a learner.
 % in our protocol as the role of the learner (detecting that consensus
 % has been achieved) is performed by the inductive invariant.
@@ -60,8 +60,8 @@ resource consumption by improving upon the `mundane' way of doing the same
 thing. Removing optimisations allowed us to simplify our proofs in Disel.
 
 Firstly, we decided that a proposer, if it fails while trying to achieve
-consensus with a proposal number (i.e. it receives a nack), it then does not
-retry with a higher proposal number. Removing this optimisation meant we did not
+consensus with a proposal number (i.e. it receives a nack), does not later try
+to propose again with a higher proposal number. Removing this optimisation meant we did not
 have to deal with the state of a proposer where it changes the proposal number it
 was initialised with. Removing this optimisation only
 effects the liveness of the protocol but not its safety, as if a proposer
@@ -175,8 +175,8 @@ state where it stops sending and receiving messages.
 \subsubsection{Acceptor}
 \begin{figure}
 \centering
-\includegraphics[width=0.5\textwidth]{figures/acceptor_state_transitions.png}
-\caption{acceptor State Transition Diagram
+\includegraphics[width=\textwidth]{figures/acceptor_state_transitions2.png}
+\caption{Acceptor State Transition Diagram
 \label{fig:myInlineFigure}}
 \end{figure}
 

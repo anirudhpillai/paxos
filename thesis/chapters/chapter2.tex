@@ -66,12 +66,14 @@ replicated servers with the client. Schneider \cite{1} points out how to use
 state machine replication to implement fault tolerant services.
 
 A state machine $M$ can be defined as $M = \langle q_0, Q, I, O, \delta, \gamma \rangle$ where \\
-$q_0$ is the starting state \\
-$Q$ is the set of all possible states. \\
-$I$ is set of all valid inputs \\
-$O$ is the set of all valid outputs \\
-$\delta$ is the state transition function, $\delta : I \times Q \rightarrow Q$ \\
-$\gamma$ is the output function, $\gamma : I \times Q \rightarrow O$
+\begin{itemize}
+  \item $q_0$ is the starting state
+  \item $Q$ is the set of all possible states.
+  \item $I$ is set of all valid inputs
+  \item $O$ is the set of all valid outputs
+  \item $\delta$ is the state transition function, $\delta : I \times Q \rightarrow Q$
+  \item $\gamma$ is the output function, $\gamma : I \times Q \rightarrow O$
+\end{itemize}
 
 The state machine begins in the start state and transitions to other states and
 produces outputs when it receives the inputs. The transition and output are found
@@ -90,20 +92,20 @@ state machine and providing all of them with the input from the client.
 As long as one of the replicas does not crash, while resolving the request,
 we can successfully return a response to the client.
 
-\subsection{Byzantine Fault Tolerance}
-Byzantine fault tolerance is the most general form of fault tolerance in which
-any arbitrary form of failure should be defended against. This failure might not
-just be a node crashing or but could also be some node producing inconsistent
-output or having corrupted state. A node with a Byzantine fault might also behave
-`maliciously', for example, by sending different responses for the same question to
-different nodes, or it might present itself as failed to some nodes and as functioning
-to others. It might do this to prevent the distributed algorithm from functioning
-correctly.
-
-The term comes from the `Byzantine Generals Problem' by Lamport et al \cite{3}
-in which a set of nodes must decide on a course of action, but at the same time
-some of the nodes are `malfunctioning' and give `conflicting information to
-different parts of the system'.
+% \subsection{Byzantine Fault Tolerance}
+% Byzantine fault tolerance is the most general form of fault tolerance in which
+% any arbitrary form of failure should be defended against. This failure might not
+% just be a node crashing or but could also be some node producing inconsistent
+% output or having corrupted state. A node with a Byzantine fault might also behave
+% `maliciously', for example, by sending different responses for the same question to
+% different nodes, or it might present itself as failed to some nodes and as functioning
+% to others. It might do this to prevent the distributed algorithm from functioning
+% correctly.
+%
+% The term comes from the `Byzantine Generals Problem' by Lamport et al \cite{3}
+% in which a set of nodes must decide on a course of action, but at the same time
+% some of the nodes are `malfunctioning' and give `conflicting information to
+% different parts of the system'.
 
 \subsection{Consensus Protocols}
 For handling faults in your distributed system you need to have replication.
@@ -168,7 +170,7 @@ and the environment, in order for the protocol to function correctly.
     Byzantine faults must have three phases. Simple Paxos only has two phases.)
 \end{itemize}
 
-As for fault tolerance of Paxos, in order to handle a failure of upto $f$ processors,
+As for fault tolerance of Paxos, in order to handle a failure of up to $f$ processors,
 we need to have a minimum $2f + 1$ processors participating in the algorithm. This
 means Paxos functions correctly as long as a majority of the processors in the
 network do not fail. We will see shortly why just a majority needs to be functioning
@@ -229,7 +231,7 @@ be subdivided into parts a, b.
 
     A promise response for proposal $\langle n, v \rangle$ is basically a
     guarantee (a 'promise') that this acceptor will not respond to any
-    messages with proposals that have a proposal number $n'$ where $n' <= n$.
+    messages with proposals that have a proposal number $n'$ where $n' \leq n$.
 
     Thus, if an incoming prepare request has proposal number that is not
     greater than what the
@@ -262,6 +264,13 @@ be subdivided into parts a, b.
     The \texttt{accepted response} is sent to the learner and contains the proposal
     that was accepted by the acceptor.
 \end{itemize}
+
+\begin{figure}
+\centering
+\includegraphics[width=\textwidth]{figures/paxos_run.png}
+\caption{A run of Paxos
+\label{fig:myInlineFigure}}
+\end{figure}
 
 \vspace{-4mm}
 \subsection{Informing learner}
@@ -306,13 +315,13 @@ components in Disel.
 \begin{figure}
 \centering
 \includegraphics[width=\textwidth]{figures/disel_state_space.jpeg}
-\caption{Disel's distributed state space and the world components as show in \cite{9}
+\caption{Disel's distributed state space and the world components as shown in \cite{9}
 \label{fig:DiselStateSpace}}
 \end{figure}
 
-As you can see from \ref{fig:DiselStateSpace}, a \texttt{statelet} is a component
-in the protocol and consists of the \texttt{MessageSoup}
-and the \texttt{DistLocState}. A message soup is `finite partial map from unique message
+As you can see from \ref{fig:DiselStateSpace}, a \textsf{statelet} is a component
+in the protocol and consists of the \textsf{MessageSoup}
+and the \textsf{DistLocState}. A message soup is `finite partial map from unique message
 identifiers to messages,
 each of which carries its sender and recipient node ids, the payload $m$, which
 includes a tag, and a boolean indicating whether the message is already received
@@ -321,10 +330,10 @@ or not yet' \cite{9}. While the local state of a node
 mapping from locations (isomorphic to natural numbers) to specific values' \cite{9}.
 
 Additionally, a protocol $P$ in Disel is defined as a tuple
-of the \texttt{Coherence}, the set of send transitions and the set of receive transitions.
+of the \textsf{Coherence}, the set of send transitions and the set of receive transitions.
 Let us now look at each of these components in detail.
 
-A \texttt{Coherence} is a function that takes in a statelet and returns a proposition
+A \textsf{Coherence} is predicate, i.e., a function that takes in a statelet and returns a proposition
 indicating whether the statelet is valid or not. Thus, the coherence allows us
 to impose constraints on the local state of each node and on the message soup.
 
@@ -341,7 +350,9 @@ A transition is defined as a tuple of consisting of the following:
 You can see in the code example below how the step function and pre condition
 are encoded for sending the \texttt{prepare request} in Paxos. \texttt{PInit},
 \texttt{PSentPrep} and \texttt{PWaitPrepResp} are some states the
-proposer can be in.
+proposer can be in. The precodition requires the state of proposer \texttt{p}
+to be either \texttt{PInit} or \texttt{PSentPrep} and holding things required
+in the specific state.
 
 \begin{lstlisting}
 (* Changes in the Node state triggered upon send *)
@@ -453,9 +464,9 @@ of the part of that code. To put it more formally,
 `An invariant of a transition system is a property that is
 always true, in all of the system’s reachable states.' \cite{21}.
 
-The problem with using just an invariant like $x > 2$ is that, you may assume
-that the invariant holds before the execution of the program, but you still
-do not have a guarantee that this invariant will hold during and after the
+The problem making an assertion like $x > 2$, at a certain point of a program execution,
+is that you may assume that the it holds at that point in the program execution, but you still
+do not have a guarantee that it will hold before, during and after the
 execution of the program, i.e. hold in any state of the program.
 
 Therefore, we need to make our invariants $inductive$. An inductive invariant
@@ -475,6 +486,7 @@ is the way to verify it.
 
 
 \section{Related Work}
+\label{sec:relatedWork}
 People have attempted to create software for verfying the correctness of distributed
 systems. IronFleet \cite{15}, developed at Microsoft Research, can prove not just
 safety but also liveness properties of distributed systems and has been used

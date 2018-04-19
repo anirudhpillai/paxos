@@ -72,7 +72,7 @@ based on it was also verified. Iterating between the proof of the client
 and design of the protocol, helped solidify the design and also make it
 minimal by removing unnecessary state transitions.
 
-\subsection{Evaluation of Disel}
+\subsection{Summary of Experience with Mechanised Verification in Disel}
 Disel was the critical component of this project and for most purposes, it
 stacked up very well to meet all the requirements.
 The experience of encoding in Disel felt very natural. This was because
@@ -140,6 +140,23 @@ There obviously is the drawback that implementation time is increased as one
 needs to prove every single transition. Furthermore, when the inductive
 invariant is added, all the transitions need to be show to adhere to it,
 thus, requiring more time to implement the proofs.
+
+People have attempted to create software for verfying the correctness of distributed
+systems. IronFleet \cite{15}, developed at Microsoft Research, can prove not just
+safety but also liveness properties of distributed systems and has been used
+to verify a `complex implementation of a Paxos-based replicated state machine
+library'. Verdi \cite{16} is another framework built on top of Coq and has been used
+to develop the `proof of linearisability of the Raft state machine replication
+algorithm'. Ivy \cite{19} is another tool which makes it much easier to find and
+prove inductive invariants for the system. Other similar tools are PSync \cite{17}
+and EventML \cite{18}.
+
+Furthermore, the current alternatives to Disel, as pointed out in
+\hyperref[sec:relatedWork]{Section 2.4}, do not allow for proving invariants
+separately from verifying the code for compliance with a protocol. Using
+Disel enabled us to implement the client application and prove that it
+follows the encoded protocol, even without having to mechanise the proof of the
+inductive invariant.
 
 
 \section{Future Work}
