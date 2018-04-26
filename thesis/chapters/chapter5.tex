@@ -1,9 +1,15 @@
 \chapter{Client Application}
 As outlined in chapter 2, our approach to using Disel involved first coding
 the protocol and the client application, and then going on write the proofs.
-Having the client application working before writing the proofs showed
+Implementing the client was important for a couple of reasons.
+Firstly, it ensures that our adapted protocol is adequate for
+implementing client applications. Having the client application working before
+writing the proofs showed
 that the design of the adapted protocol worked and could be used
-to achieve consensus.
+to achieve consensus. Secondly, the client application also helped us test
+our encoding of the adapted protocol. As we did encode the inductive invariant,
+the working of the client application helped us test the properties of the
+adapted protocol, i.e. observing nodes achieve consensus using the protocol.
 
 In this chapter we look at the implementation of a simple client application
 that uses the proof of the adapted protocol to create an application where
@@ -173,7 +179,25 @@ wrapper around the extracted code that enables communication with the
 acceptor. The wrapper can keep checking when each of the acceptors has accepted
 a proposal and can compare the values in those proposals. Using this the wrapper
 can `announce' when the system has achieved consensus. An example wrapper which
-uses the extracted code is implemented in the \texttt{paxos.py} file.
+uses the extracted code is implemented in the \texttt{paxos.py} file. The code
+listing below shows the output of running this wrapper. The output shows
+the values accepted by each acceptor and using this information, the wrapper
+announce that consensus has been acheived on value $2$ as a majority of
+acceptors have accepted it.
+
+\begin{lstlisting}
+got msg in protocol 0 with tag = 3, contents = [2; 2] from 2
+Acceptor 1 accepted 2
+got msg in protocol 0 with tag = 3, contents = [2; 2] from 2
+Acceptor 2 accepted 2
+got msg in protocol 0 with tag = 3, contents = [2; 2] from 2
+Acceptor 3 accepted 2
+========================================
+
+Consesus achieved on value: 2
+\end{lstlisting}
+
+
 Writing such wrappers helps to extend the functionality of the extracted
 client application and also shows that the client application can be used in
 other applications where it provides a verified implementation of Paxos.

@@ -111,8 +111,8 @@ proposer has to send and receive messages from all the acceptors.
 \subsubsection{Proposer}
 \begin{figure}
 \centering
-\includegraphics[width=0.5\textwidth]{figures/proposer_state_transitions.png}
-\caption{proposer State Transition Diagram
+\includegraphics[width=\textwidth]{figures/proposer_state_transitions.png}
+\caption{Proposer State Transition Diagram
 \label{fig:myInlineFigure}}
 \end{figure}
 
@@ -175,7 +175,7 @@ state where it stops sending and receiving messages.
 \subsubsection{Acceptor}
 \begin{figure}
 \centering
-\includegraphics[width=\textwidth]{figures/acceptor_state_transitions2.png}
+\includegraphics[width=0.7\textwidth]{figures/acceptor_state_transitions.png}
 \caption{Acceptor State Transition Diagram
 \label{fig:myInlineFigure}}
 \end{figure}
@@ -205,104 +205,103 @@ the acceptor remains in the same state.
 In the \texttt{AAccepted} state, the acceptor stops listening for and responding
 to messages. This is similar to the \texttt{PAbort} state for the proposer.
 
-
-\subsection{Inductive Invariant}
-A critical part of proving our protocol in Disel was designing an inductive invariant
-for our adapted protocol. The inductive invariant helps ensure the correctness of
-our adapted protocol enabling us to imposing requirements on the global state of the system.
-For proving the correctness of Paxos we found that our invariant had to capture
-when consensus is achieved on a value and also that once consensus is achieved
-on a particular value, further rounds of the protocol don’t change this value.
-
-\begin{quote}
-Inductive invariant means a property which when it holds for a state $s$,
-it will hold for any state $s'$ reachable from $s$.
-\end{quote}
-
-The crux of Paxos' correctness lies in the prepare phase where, before sending
-the accept request, the proposer must first set the value of the proposal, that
-it wants to propose, to be the value of the highest numbered proposal it receives
-as a promise. This ensures that when consensus has been achieved on a value `v',
-further rounds of the protocol also ensure that consensus will only be achieved on `v'.
-
-We established two invariants \textbf{I1} and \textbf{I2} which together form an inductive
-invariant for our protocol that also proves its safety.
-
-\begin{itemize}
-  \item \textbf{I1} simply tries to say that there can only be one unique value
-    associated with a particular proposal number for any proposal that has been accepted.
-  \item \textbf{I2} states that once consensus has been achieved on a value v,
-    every higher number proposal accepted by an acceptor also has the value v.
-\end{itemize}
-
-The mathematical representations for the invariants is given by.
-\begin{itemize}
-  \item \textbf{I1} - $\forall a_i, a_j \in A, \langle p, v_i \rangle \in a_{i}.accepted
-  \land \langle p, v_j \rangle \in a_{j}.accepted \rightarrow v_i = v_j$.
-  \item \textbf{I2} - $\forall a \in A, \forall \langle p_i, v_i \rangle \in a.accepted
-    \rightarrow \forall \langle p_j, v_j \rangle \in  a.accepted \land p_j > p_i
-    \rightarrow v_j = v_i$.
-\end{itemize}
-
-\textbf{I1} is preserved because if there are n proposers, they are
-initialised with a unique proposal number and throughout the running of the
-adapted protocol, the proposer always uses this unique proposal number for any
-value that it proposes. Hence, two different proposers never propose a proposal
-with the same proposal number as they all are initialised with different
-proposal numbers. Additionally, each proposer only sends one round
-of accept requests with the same proposal. So as each proposer proposes only one
-value with a unique proposal number, hus, we can conclude that each accepted proposal
-will have a unique value associated with a particular proposal number.
-
-For proving that \textbf{I2} is preserved, we need to show that once consensus
-has been achieved
-on a proposal with value $v$ then every other proposal, with a higher
-proposal number, on which consensus is achieved will also have
-proposal value set to $v$.
-
-In order for consensus to be achieved on a new proposal, the new
-proposal first needs to be accepted by an acceptor.
-So we can reduce the requirement as follows.
-
-$\Rightarrow$ If consensus has been achieved on a proposal
-$\langle p_1, v_1 \rangle$ then every other proposal $\langle p_2, v_2 \rangle$
-accepted by any acceptor, where $p_2 > p_1$, has $v_2 = v_1$.
-
-Further, acceptors can only accept a proposal which has been proposed
-by a proposer.
-
-$\Rightarrow$ If consensus has been achieved on a proposal $\langle p_1, v_1 \rangle$
-then every accept request $\langle p_2, v_2 \rangle$ sent by the proposer with
-$p_2 > p_1$, has $v_2 = v_1$.
-
-\begin{equation}
-\textrm{In order to prove the above, let's assume that consensus has been
-achieved on a proposal} \langle p_1, v_1 \rangle.
-\end{equation}
-
-After that lets say that the systems achieves consensus on
-$\langle p_2, v_2 \rangle$ where $p_2 > p_1$ and there does not exist $p_x$ such
-that consensus has been achieved on a proposal with proposal
-number $p_x$ where $p_1 < p_x < p_2$.
-
-So from our assumption (4.1), there must be a majority of acceptors
-such that they have accepted the proposal $\langle p_2, v_2 \rangle$.
-So we need to show that in $v_2 = v_1$.
-This is ensured in Paxos because of Phase 1 where the proposer must first
-get promises from a majority.
-
-So any majority the proposer for $p_2, v_2$ gets in Phase 1,
-will have at least one acceptor $a$ that has accepted $\langle p_1, v_1 \rangle$.
-Paxos also ensures that before sending the accept request for
-$p_2, v_2$, the proposer must select the value of the highest numbered
-proposals which it receives in its promises.
-
-So the acceptor $a$ will send $\langle p_1, v_1 \rangle$ in its promise message to
-the proposer. As $\langle p_2, v_2 \rangle$ is the only proposal number which has
-proposal number greater than $p_1$, the proposer must set $v_2 = v_1$ in its
-accept request message $\langle p_2, v_2 \rangle$ as $v_1$ is the value of the
-highest numbered proposal that it receives as a promise response.
-Thus, meeting our above requirement.
+% \subsection{Inductive Invariant}
+% A critical part of proving our protocol in Disel was designing an inductive invariant
+% for our adapted protocol. The inductive invariant helps ensure the correctness of
+% our adapted protocol enabling us to imposing requirements on the global state of the system.
+% For proving the correctness of Paxos we found that our invariant had to capture
+% when consensus is achieved on a value and also that once consensus is achieved
+% on a particular value, further rounds of the protocol don’t change this value.
+%
+% \begin{quote}
+% Inductive invariant means a property which when it holds for a state $s$,
+% it will hold for any state $s'$ reachable from $s$.
+% \end{quote}
+%
+% The crux of Paxos' correctness lies in the prepare phase where, before sending
+% the accept request, the proposer must first set the value of the proposal, that
+% it wants to propose, to be the value of the highest numbered proposal it receives
+% as a promise. This ensures that when consensus has been achieved on a value `v',
+% further rounds of the protocol also ensure that consensus will only be achieved on `v'.
+%
+% We established two invariants \textbf{I1} and \textbf{I2} which together form an inductive
+% invariant for our protocol that also proves its safety.
+%
+% \begin{itemize}
+%   \item \textbf{I1} simply tries to say that there can only be one unique value
+%     associated with a particular proposal number for any proposal that has been accepted.
+%   \item \textbf{I2} states that once consensus has been achieved on a value v,
+%     every higher number proposal accepted by an acceptor also has the value v.
+% \end{itemize}
+%
+% The mathematical representations for the invariants is given by.
+% \begin{itemize}
+%   \item \textbf{I1} - $\forall a_i, a_j \in A, \langle p, v_i \rangle \in a_{i}.accepted
+%   \land \langle p, v_j \rangle \in a_{j}.accepted \rightarrow v_i = v_j$.
+%   \item \textbf{I2} - $\forall a \in A, \forall \langle p_i, v_i \rangle \in a.accepted
+%     \rightarrow \forall \langle p_j, v_j \rangle \in  a.accepted \land p_j > p_i
+%     \rightarrow v_j = v_i$.
+% \end{itemize}
+%
+% \textbf{I1} is preserved because if there are n proposers, they are
+% initialised with a unique proposal number and throughout the running of the
+% adapted protocol, the proposer always uses this unique proposal number for any
+% value that it proposes. Hence, two different proposers never propose a proposal
+% with the same proposal number as they all are initialised with different
+% proposal numbers. Additionally, each proposer only sends one round
+% of accept requests with the same proposal. So as each proposer proposes only one
+% value with a unique proposal number, hus, we can conclude that each accepted proposal
+% will have a unique value associated with a particular proposal number.
+%
+% For proving that \textbf{I2} is preserved, we need to show that once consensus
+% has been achieved
+% on a proposal with value $v$ then every other proposal, with a higher
+% proposal number, on which consensus is achieved will also have
+% proposal value set to $v$.
+%
+% In order for consensus to be achieved on a new proposal, the new
+% proposal first needs to be accepted by an acceptor.
+% So we can reduce the requirement as follows.
+%
+% $\Rightarrow$ If consensus has been achieved on a proposal
+% $\langle p_1, v_1 \rangle$ then every other proposal $\langle p_2, v_2 \rangle$
+% accepted by any acceptor, where $p_2 > p_1$, has $v_2 = v_1$.
+%
+% Further, acceptors can only accept a proposal which has been proposed
+% by a proposer.
+%
+% $\Rightarrow$ If consensus has been achieved on a proposal $\langle p_1, v_1 \rangle$
+% then every accept request $\langle p_2, v_2 \rangle$ sent by the proposer with
+% $p_2 > p_1$, has $v_2 = v_1$.
+%
+% \begin{equation}
+% \textrm{In order to prove the above, let's assume that consensus has been
+% achieved on a proposal} \langle p_1, v_1 \rangle.
+% \end{equation}
+%
+% After that lets say that the systems achieves consensus on
+% $\langle p_2, v_2 \rangle$ where $p_2 > p_1$ and there does not exist $p_x$ such
+% that consensus has been achieved on a proposal with proposal
+% number $p_x$ where $p_1 < p_x < p_2$.
+%
+% So from our assumption (4.1), there must be a majority of acceptors
+% such that they have accepted the proposal $\langle p_2, v_2 \rangle$.
+% So we need to show that in $v_2 = v_1$.
+% This is ensured in Paxos because of Phase 1 where the proposer must first
+% get promises from a majority.
+%
+% So any majority the proposer for $p_2, v_2$ gets in Phase 1,
+% will have at least one acceptor $a$ that has accepted $\langle p_1, v_1 \rangle$.
+% Paxos also ensures that before sending the accept request for
+% $p_2, v_2$, the proposer must select the value of the highest numbered
+% proposals which it receives in its promises.
+%
+% So the acceptor $a$ will send $\langle p_1, v_1 \rangle$ in its promise message to
+% the proposer. As $\langle p_2, v_2 \rangle$ is the only proposal number which has
+% proposal number greater than $p_1$, the proposer must set $v_2 = v_1$ in its
+% accept request message $\langle p_2, v_2 \rangle$ as $v_1$ is the value of the
+% highest numbered proposal that it receives as a promise response.
+% Thus, meeting our above requirement.
 
 \subsection{Simulator}
 %% Talk about how it modeled how Disel works

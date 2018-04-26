@@ -147,3 +147,8 @@ An inductive invariant is necessary as it helps verify the entire
 global system. As without it, the code might follow the protocol, but the
 protocol might itself be broken. In case of Paxos this could be the case that
 the nodes follow the protocol but they never achieve consensus.
+
+In Disel, we show that the inductive invariant holds in the initial state of
+the system. Then we show that the inductive invariant holds with every single
+state transition in the protocol. This enables us to prove that the
+inductive invariant holds in the protocol, thus, verifying it.
