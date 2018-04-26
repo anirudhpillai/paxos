@@ -32,6 +32,7 @@ stages in the workflow.
     client and protocol.
 \end{enumerate}
 
+\vspace{-5mm}
 \subsection{Line counts for Proofs}
 \begin{center}
 \begin{tabular}{ |c|c|c| }
@@ -49,11 +50,13 @@ SimplePaxosApp.v & 73 & 11 \\
 \vspace{-5mm}
 \section{Critical Evaluation of the project}
 We first look at each of the proof files to evaluate which proofs
-were finished. Then we look at the things that were missing for a fully
+were finished. Then we look at the things that were missing from a fully
 complete mechanisation of Paxos and come up with a percentage of how far we
 got to the goal.
 
-\subsection{PaxosProtocol.v}
+\subsection{Proof Files}
+
+\subsubsection{PaxosProtocol.v}
 \begin{enumerate}
   \item \texttt{RoleState}
   Defines the states that the nodes can be in. \\
@@ -67,7 +70,7 @@ got to the goal.
 \end{enumerate}
 
 \vspace{-5mm}
-\subsection{PaxosAcceptor.v}
+\subsubsection{PaxosAcceptor.v}
 \begin{enumerate}
   \item \texttt{read\_state} \\
     Returns the current state of the node. \\
@@ -92,7 +95,7 @@ got to the goal.
 \end{enumerate}
 
 \vspace{-5mm}
-\subsection{PaxosProposer.v}
+\subsubsection{PaxosProposer.v}
 \begin{enumerate}
   \item \texttt{read\_round} \\
     Returns the current round of the given node. \\
@@ -115,7 +118,8 @@ got to the goal.
   the proposer reaches the \texttt{PAbort} state after finishing execution.
 \end{enumerate}
 
-\subsection{Missing Pieces}
+\vspace{-5mm}
+\subsection{Missing Pieces in Mechanisation}
 There were a few things missing for a complete mechanised proof of Paxos.
 Also, there were also a few places in the project where things
 were not proved mechanically.
@@ -135,6 +139,7 @@ were not proved mechanically.
     in Disel.
 \end{enumerate}
 
+\vspace{-5mm}
 \subsection{Conclusion}
 We were only able to reach the third stage of the Disel workflow by
 verifying the client application and showing that it follows the
@@ -165,7 +170,7 @@ Thus, having looked at everything we can say we completed about 65\% of
 the mechanised proof. This is because the invariant is a major chunk of
 the proof and there are also a few proofs that still need to be completed.
 
-\subsection{Summary of Experience with Mechanised Verification in Disel}
+\section{Summary of Experience with Mechanised Verification in Disel}
 Disel was the critical component of this project and for most purposes, it
 stacked up very well to meet all the requirements.
 The experience of encoding in Disel felt very natural. This was because
@@ -234,7 +239,7 @@ needs to prove every single transition. Furthermore, when the inductive
 invariant is added, all the transitions need to be show to adhere to it,
 thus, requiring more time to implement the proofs.
 
-People have attempted to create software for verfying the correctness of distributed
+People have attempted to create software for verifying the correctness of distributed
 systems. IronFleet \cite{15}, developed at Microsoft Research, can prove not just
 safety but also liveness properties of distributed systems and has been used
 to verify a `complex implementation of a Paxos-based replicated state machine

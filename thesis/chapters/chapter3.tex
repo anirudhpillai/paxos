@@ -7,21 +7,20 @@ The project aims to mechanise the proof of Paxos in
 Disel. Mechanisation is a way to use Coq's higher-order logic to build mechanically
 checked proofs of the consensus agreement and the code correctness.
 
-This will involve doing the modelling on the protocol to come up with
+This will involve modelling the protocol to come up with
 state transitions and inductive invariants, in order to encode it in Disel.
 Additionally, we will also implement a client application built on top
 of the verified protocol that uses Disel's code extraction features.
-
 The mechanisation will allow us to prove the inductive invariant for Paxos,
-that proves consensus being achieved,
-and also show that the implemented client application complies with the protocol.
+that proves consensus being achieved, and also show that the implemented client
+application complies with the protocol.
 
-% Section 3.1 – tell what do you mean  to prove (compliance of implementation to the protocol,
+% Section 3.1 – tell what do you mean to prove (compliance of implementation to the protocol,
 % invariant inductivity etc). Better yet, say that you are formalising Paxos in Disel, so that
 % the formalisation will allow you to establish (i.e., prove) the properties mentioned above.
 % You can expand on this in requirements, telling what exactly are the logical statements of
 % interest wrt. to the system in question (Paxos) that you'd like to prove via encoding it in
-% Disel. Also, you should mention that
+% Disel.
 
 
 \section{Requirements}
