@@ -141,7 +141,9 @@ another list \texttt{promises} which is defined as below to be a list of tuples
 each containing a \texttt{nid} (a natural number identifier for a node), a boolean
 and a \texttt{proposal}.
 
-\texttt{Definition promises := seq (nid * bool * proposal).}
+\begin{lstlisting}
+Definition promises := seq (nid * bool * proposal).
+\end{lstlisting}
 
 The proposer stays in this state and keeps receiving messages from the acceptor
 until one of the following two things happen:

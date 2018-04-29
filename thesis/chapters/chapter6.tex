@@ -15,13 +15,17 @@
 \section{Summary of Achievements}
 The project achieved all its goals apart from proving the inductive invariant.
 Having followed the Disel workflow we can match the deliverables to the
-stages in the workflow.
+stages in the workflow. We delivered a partial mechanised proof of Paxos in Disel
+which included a client application that was shown to adhere to the encoded
+protocol. However, the complete correctness of the protocol itself is missing
+because we ran out of time to fully mechanise the proof of the inductive
+invariant that verifies the protocol.
+
 \begin{enumerate}
   \item \textbf{The Adapted Protocol} \\
     We designed the state transition systems for Paxos in order to help encode it in
     Disel. The state transition systems were also tested on the Python simulator
-    and then encoded in Disel. We also designed the inductive invariant for Paxos
-    that proved its correctness.
+    and then encoded in Disel.
   \item \textbf{Client Application} \\
     We also created a client application that uses the encoded protocol. The
     code for the client was extracted using Disel and we successfully wrote
@@ -29,20 +33,20 @@ stages in the workflow.
   \item \textbf{Proof of the Client and the Protocol} \\
     We also encoded the adapted protocol in Disel and completed the majority
     of the proofs for it. There are still a few proofs remaining in the
-    client and protocol.
+    client and protocol which we look at in the next section.
 \end{enumerate}
 
 \vspace{-5mm}
 \subsection{Line counts for Proofs}
 \begin{center}
-\begin{tabular}{ |c|c|c| }
+\begin{tabular}{ |l|p{8cm}|c|c| }
 \hline
-File & Specs & Proofs\\
+File & Description & Specs & Proofs\\
 \hline
-PaxosProtocol.v & 278 & 87 \\
-PaxosProposer.v & 155 & 96 \\
-PaxosAcceptor.v & 176 & 137 \\
-SimplePaxosApp.v & 73 & 11 \\
+PaxosProtocol.v & Defines the state transitions and step functions & 278 & 87 \\
+PaxosProposer.v & Implemetation of a Proposer & 155 & 96 \\
+PaxosAcceptor.v & Implemetation of an Acceptor &176 & 137 \\
+SimplePaxosApp.v & Initialises the client application with the proposers and acceptors & 73 & 11 \\
 \hline
 \end{tabular}
 \end{center}
@@ -58,13 +62,13 @@ got to the goal.
 
 \subsubsection{PaxosProtocol.v}
 \begin{enumerate}
-  \item \texttt{RoleState}
+  \item \texttt{RoleState} \\
   Defines the states that the nodes can be in. \\
   Fully implemented.
-  \item \texttt{step\_send}
+  \item \texttt{step\_send} \\
   Defines all the node transitions on sending a message. \\
   Fully implemented.
-  \item \texttt{step\_recv}
+  \item \texttt{step\_recv} \\
   Defines all the node transitions on sending a message. \\
   Fully implemented.
 \end{enumerate}
@@ -78,16 +82,19 @@ got to the goal.
   \item \texttt{receive\_prepare\_req\_loop} \\
     Receives and handles an incoming proposal from
     a prepare request. \\
-    Fully Proven.
+    4 of 4 obligations fully proven to show that loop invariant holds, and that
+    given the pre condition, we reach the post condition after execution of the loop.
   \item \texttt{resp\_to\_prepare\_req} \\
     Takes in the incoming proposal and value of current promised number
     and sends a promise or a nack response. \\
-    1 of 1 obligation remaining to be proved. The problem is to show that
+    1 of 1 obligation remaining to be proved that involves showing the pre and post
+    conditions hold. The problem is to show that
     the node from which the prepare request was received is a proposer.
   \item \texttt{receive\_acc\_req\_loop} \\
     Handles an incoming accept request and updates the current state accordingly \\
-    Fully Proven.
-  \item \texttt{acceptor\_round}
+    4 of 4 obligations fully proven to show that loop invariant holds, and that
+    given the pre condition, we reach the post condition after execution of the loop.
+  \item \texttt{acceptor\_round} \\
     Combines all the loops to give the implementation of an acceptor. \\
     1 of 1 obligation remaining to be proved. The difficulty is in proving
     the post condition which states that an acceptor can be in either \texttt{AInit},
@@ -102,9 +109,12 @@ got to the goal.
     Fully Proven.
   \item \texttt{send\_prepare\_req\_loop} \\
     Sends prepare requests to all the acceptors. \\
-    1 of 2 obligations remaining to be proved. The problem is showing that
-    the node sending the prepare requests is a proposer.
-  \item \texttt{recv\_prepare\_resp\_loop} \\
+    1 of 2 obligations remaining to be proved. The proven obligation shows that we
+    can reach the post condition from the pre condition. The remaining obligation
+    involves showing both the pre condition and post condition hold.
+    The problem in proving this obligation is showing that the node sending the
+    prepare request is a proposer.
+  \item \texttt{receive\_prepare\_resp\_loop} \\
     Handles the incoming promises or nacks and updates the state accordingly. \\
     1 of 4 obligations remaining. Need to show that the invariant of the loop holds
     irrespective of whether a promise or a nack was received.
@@ -112,10 +122,10 @@ got to the goal.
     Sends an accept request to the entire set of acceptors. \\
     1 of 1 obligation remaining to be proved. The problem is showing that
     the node sending the prepare requests is a proposer.
-  \item \texttt{proposer\_round}
-  Combines all the loops to give the implementation of a proposer. \\
-  1 of 1 obligation remaining to be proved. The difficulty was in showing how
-  the proposer reaches the \texttt{PAbort} state after finishing execution.
+  \item \texttt{proposer\_round} \\
+    Combines all the loops to give the implementation of a proposer. \\
+    1 of 1 obligation remaining to be proved. The difficulty was in showing how
+    the proposer reaches the \texttt{PAbort} state after finishing execution.
 \end{enumerate}
 
 \vspace{-5mm}
@@ -146,12 +156,15 @@ verifying the client application and showing that it follows the
 adapted protocol and ran out of time to prove the inductive invariant.
 While this stage does not show that the protocol itself
 is completely verified, we can still think of it as relatively strong
-correctness as the protocol is based on the simple Paxos protocol and
-we have also designed and come up with a proof for its inductive invariant
-as highlighted in the section 4.1.3. Additionally, simple Paxos already has
-a proof of correctness provided by Lamport \cite{4}.
+correctness as the protocol is based on the simple Paxos protocol.
+We have show that the client follows the protocol and
+if one trusts the protocol, then we have an implementation that has been proven correct
+with respect to it (modulo the missing obligations discussed above).
+Additionally, simple Paxos already has a proof of correctness provided by Lamport \cite{4}.
+The way to prove the complete correctness of the protocol will be to encode the
+inductive invariant of Paxos in Disel, which we leave to future work.
 
-Furthermore, Although the learner in the client application was not verified,
+Furthermore, although the learner in the client application was not verified,
 writing the wrapper enabled us to show that it was possible to interface with
 the code extracted from Disel. This showed that the verified code generated by
 Disel can be used in other larger application as the verified implementation of
@@ -167,7 +180,7 @@ minimal by removing unnecessary state transitions.
 
 %% Percentage Completion
 Thus, having looked at everything we can say we completed about 65\% of
-the mechanised proof. This is because the invariant is a major chunk of
+the mechanised of Paxos in Disel. This is because the invariant is a major chunk of
 the proof and there are also a few proofs that still need to be completed.
 
 \section{Summary of Experience with Mechanised Verification in Disel}

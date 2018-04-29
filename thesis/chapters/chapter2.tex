@@ -5,11 +5,11 @@ background information and look at related work to see different approaches used
 to solve the problem.
 
 \section{Distributed Systems}
-A distributed system is a model in which processes running on running different
+A distributed system is a model in which processes running on different
 computers, which are connected together in a network, exchange messages to coordinate
 their action, often resulting in the user thinking of the entire system as one single
 unified computer. A computer in the distributed system is also alternatively referred to as a
-processor or a node in the system. Each node in a distributed systems has its
+processor or a node in the system. Each node in a distributed system has its
 own memory.
 
 We will now go over a few concepts of distributed systems which will help us understand
@@ -89,7 +89,7 @@ of this project as we will see soon when we need to encode our protocol in Disel
 State machine replication involves modelling our single server, from the client
 server model, and using multiple copies (replicas) of the same deterministic
 state machine and providing all of them with the input from the client.
-As long as one of the replicas does not crash, while resolving the request,
+As long as one of the replicas does not crash while resolving the request,
 we can successfully return a response to the client.
 
 % \subsection{Byzantine Fault Tolerance}
@@ -164,7 +164,7 @@ and the environment, in order for the protocol to function correctly.
   \item Processors run at an arbitrary speed and may fail or restart. Handling this relates
     to the fault tolerant nature of Paxos. Also, we assume that Byzantine faults don't occur.
     This means that all processors actually work together to try to achieve consensus on a value.
-    There are variants of Paxos which can also handle Byzantine failure buy not simple Paxos.
+    There are variants of Paxos which can also handle Byzantine failure but not simple Paxos.
     (This can be linked to the `Practical Byzantine Fault Tolerance' paper, by Castro et al \cite{2},
     which states that any algorithm handling
     Byzantine faults must have three phases. Simple Paxos only has two phases.)
@@ -181,7 +181,7 @@ different roles - proposer, acceptor or learner.
 \begin{itemize}
   \item \textbf{Proposer} - A process acting as a proposer listens for client
     request and proposes a value which the network of processes tries to agree upon.
-  \item \textbf{Acceptor} - acceptors receive proposed values from the proposers
+  \item \textbf{Acceptor} - Acceptors receive proposed values from the proposers
     and then respond to them stating whether they are in a position to accept the value or not.
     For a proposed value to be accepted, a majority of all the existing acceptors
     have to accept the proposed value.
@@ -189,21 +189,21 @@ different roles - proposer, acceptor or learner.
     The learner can then figure out when consensus has been achieved by monitoring
     when a majority of acceptors have accepted the same proposal.
     Once the acceptors agree on a value, the learner may act on the value by,
-    for example, sending a request to the client informing them about the agreed value.
+    for example, sending a request to the client that informs them about the agreed value.
 \end{itemize}
 
 \vspace{-4mm}
 \subsection{Choosing a Value}
 For passing around the value to be chosen from one processor to the other,
-a processor must send a 'proposal' to the other processor.
+a processor must send a `proposal' to the other processor.
 You can think of a proposal as just a tuple $\langle n, v \rangle$.
 $n$ is just a natural number associated with a proposal which makes
 it easy to keep track of all the different proposals and $v$ is the value
 the value that is being proposed.
 
-A \texttt{quorum} of acceptors is a subset of the set of all acceptors
+A \textsf{quorum} of acceptors is a subset of the set of all acceptors
 and has a length greater
-than $N / 2$ where $N$ is the length of the set of acceptors. A \texttt{quorum} is just
+than $N / 2$ where $N$ is the length of the set of acceptors. A \textsf{quorum} is just
 a set denoting a majority of all the available acceptors.
 
 \begin{quote}
@@ -220,24 +220,24 @@ be subdivided into parts a, b.
 \begin{itemize}
   \item \textbf{Phase 1a: Prepare Request.}
     A proposer sends a proposal
-    $\langle n, v \rangle$ to each acceptor in any randomly chosen \texttt{quorum} of acceptors.
-    This first message that the proposer sends out is called a \texttt{prepare request}.
+    $\langle n, v \rangle$ to each acceptor in any randomly chosen \textsf{quorum} of acceptors.
+    This first message that the proposer sends out is called a \textsf{prepare request}.
     This phase can be thought of as the proposer trying to
     `prepare' the acceptors to `accept' a value in the future.
   \item \textbf{Phase 1b: Promise Response.}
-    An acceptor on receiving a prepare request, responds with a \texttt{promise response},
+    An acceptor on receiving a prepare request, responds with a \textsf{promise response},
     if and only if the acceptor has not already sent a promise response with
     a proposal containing a proposal number $n'$ where $n' > n$.
 
     A promise response for proposal $\langle n, v \rangle$ is basically a
-    guarantee (a 'promise') that this acceptor will not respond to any
+    guarantee (a `promise') that this acceptor will not respond to any
     messages with proposals that have a proposal number $n'$ where $n' \leq n$.
 
     Thus, if an incoming prepare request has proposal number that is not
     greater than what the
     acceptor has already promised earlier, then the acceptor can ignore this
     prepare request by not responding to it. Although, for speeding up the
-    protocol, the acceptor can send out a \texttt{nack response} which tells the
+    protocol, the acceptor can send out a \textsf{nack response} which tells the
     proposer to stop trying to achieve consensus with this proposal.
 
     If the acceptor has not already accepted a proposal, then the body of
@@ -245,7 +245,7 @@ be subdivided into parts a, b.
     last proposal that it accepted.
   \item \textbf{Phase 2b: Accept Request.}
     If the proposer successfully receives promise responses from a majority of
-    acceptors, then it can send out an \texttt{accept request}. A accept request is
+    acceptors, then it can send out an \textsf{accept request}. A accept request is
     a message containing a proposal which tells an acceptor to accept this
     proposal if it can.
 
@@ -259,9 +259,10 @@ be subdivided into parts a, b.
     to another \texttt{quorum} of acceptors.
   \item \textbf{Phase 2b: Accepted Response.}
     Any acceptor that receives the accept request with proposal $\langle n, v \rangle$,
-    responds with an \texttt{accepted response} if and only if it hasn't already promised
+    accepts the proposal and
+    responds with an \textsf{accepted response} if and only if it hasn't already promised
     not to respond to any proposals with proposal number $n'$ where $n' >= n$.
-    The \texttt{accepted response} is sent to the learner and contains the proposal
+    The \textsf{accepted response} is sent to the learner and contains the proposal
     that was accepted by the acceptor.
 \end{itemize}
 
@@ -279,11 +280,11 @@ have agreed on a value. There are various ways to do this.
 
 \begin{enumerate}
   \item Whenever an acceptor accepts a value, it should send the accepted proposal
-    to all the learners (\texttt{accepted response}).
+    to all the learners (\textsf{accepted response}).
     The learners will then know when a majority of acceptors
     have accepted the same value.
   \item We can have a distinguished learner which informs other learners about
-    the choose value. The acceptors only need to inform this particular learner
+    the chosen value. The acceptors only need to inform this particular learner
     when they accept a value. This reduces number of messages sent but the
     distinguished learner becomes the single point of failure and also requires
     an additional round of sending messages where the distinguished learner informs
@@ -337,7 +338,7 @@ A \textsf{Coherence} is predicate, i.e., a function that takes in a statelet and
 indicating whether the statelet is valid or not. Thus, the coherence allows us
 to impose constraints on the local state of each node and on the message soup.
 
-A transition is defined as a tuple of consisting of the following:
+A transition is defined as a tuple consisting of the following:
 \begin{enumerate}
   \item Tag - a unique natural number identifier for the message to be sent in the transition.
   \item Precondition - The constraints that are imposed on identity of the sender of the message,
@@ -348,7 +349,7 @@ A transition is defined as a tuple of consisting of the following:
 \end{enumerate}
 
 You can see in the code example below how the step function and pre condition
-are encoded for sending the \texttt{prepare request} in Paxos. \texttt{PInit},
+are encoded for sending the \textsf{prepare request} in Paxos. \texttt{PInit},
 \texttt{PSentPrep} and \texttt{PWaitPrepResp} are some states the
 proposer can be in. The precodition requires the state of proposer \texttt{p}
 to be either \texttt{PInit} or \texttt{PSentPrep} and holding things required

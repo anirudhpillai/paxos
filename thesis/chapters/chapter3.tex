@@ -1,19 +1,26 @@
 \chapter{Requirements and Analysis}
 
 \section{Problem Statement}
-Having looked at the background information on distributed sytems, consensus protocols
-and Disel, we can formalise the problem statement for the project.
-The project aims to mechanise the proof of Paxos in
-Disel. Mechanisation is a way to use Coq's higher-order logic to build mechanically
-checked proofs of the consensus agreement and the code correctness.
+Having looked at the background information on distributed sytems, consensus
+protocols and Disel, we can formalise the problem statement for the project.
+The project aims to mechanise the proof of Paxos in Disel.
 
-This will involve modelling the protocol to come up with
-state transitions and inductive invariants, in order to encode it in Disel.
-Additionally, we will also implement a client application built on top
-of the verified protocol that uses Disel's code extraction features.
-The mechanisation will allow us to prove the inductive invariant for Paxos,
-that proves consensus being achieved, and also show that the implemented client
-application complies with the protocol.
+Mechanisation is a way to use Coq's higher-order logic to build mechanically
+checked proofs. By mechanising
+Paxos in Disel we will create a fully verified implementation of the protocol
+(of the consensus agreement and the code correctness)
+which can then be used to achieve consensus in a set of nodes running the protocol.
+
+% This will involve modelling the protocol to design
+% state transitions and an inductive invariant that proves the correctness
+% of Paxos, in order to encode it in Disel.
+
+The correctness of Paxos will be shown by, mechanising in Disel, an inductive
+invariant for it that proves consensus being achieved.
+We will also implement a client application built on top
+of the verified protocol by using Disel's code extraction features.
+Finally, we will mechanise the proofs showing that the implemented
+client application complies with the encoded protocol.
 
 % Section 3.1 – tell what do you mean to prove (compliance of implementation to the protocol,
 % invariant inductivity etc). Better yet, say that you are formalising Paxos in Disel, so that
@@ -91,7 +98,6 @@ We also need to design state transition systems for the nodes that participate
 in the protocol. This makes it easier for us to encode the protocol in Disel as
 we already know which send and receive transitions we will need from each state
 and thus can easily code the transition wrappers.
-
 In chapter 4, we look go into the details of how we tackled this stage on our way
 to mechanising the proof of Paxos.
 
@@ -103,7 +109,7 @@ where nodes try to acheive consensus on one of the proposals that the proposer
 is initialised with. This will enabled us to see in action the stages of the protocol
 that lead to consensus being achieved.
 
-While using Disel, we will often had to cycle between stage 1 and stage 2.
+While using Disel, we will often have to cycle between stage 1 and stage 2.
 This is because while implementing the client, you realise things like, you are
 missing one state for a node that is required in order for the protocol to progress.
 There was a case when we saw this while writing the client for Paxos.
@@ -132,9 +138,9 @@ Finishing this stage means that we have finished the proof of the client.
 Yet, at this stage we can only be sure that the code follows the protocol.
 
 Reaching this state also gives us relatively strong correctness properties. This
-because just by ensuring the code follows the protocol, if the protocol we have
-implemented has already been, we can know that the code will work correctly
-although we cannot be completely sure until we finish the next stage.
+is because, just by ensuring that the client follows the protocol, if we already know
+that the protocol is correct (as is the case with Paxos because of the proof of
+its correctness in Lamport's paper \cite{4}), we can know that the client will work correctly.
 In the mechanising of Paxos we were only able to reach till this stage,
 we designed the inductive invariant but ran out of time to encode it.
 As the actual protocol we encoded is the simple Paxos algorithm, it still
@@ -150,4 +156,5 @@ the nodes follow the protocol but they never achieve consensus.
 In Disel, we show that the inductive invariant holds in the initial state of
 the system. Then we show that the inductive invariant holds with every single
 state transition in the protocol. This enables us to prove that the
-inductive invariant holds in the protocol, thus, verifying it.
+inductive invariant holds in the protocol, thus, verifying that the protocol
+functions correctly.

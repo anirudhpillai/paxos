@@ -87,6 +87,62 @@ statement need to have the same type. The distributed Hoare types and the pre an
 defined are also show in the code listing. The proposer starts off in the \texttt{PInit}
 state and on finishing the round, ends up in the \texttt{PAbort}.
 
+\section{Verfying the Client}
+We will now briefly look at how the proofs were encoded.
+Below we have part of the code listing for \texttt{receive\_prepare\_req\_loop}.
+In the implementation you can see withing the \texttt{@while} loop that it
+tries to catch an incoming prepare request and return the message if it
+arrives correctly.
+
+The pre and post conditions state that before executing this loop, the acceptor
+starts in the \texttt{AInit} state and after the execution, it finishes in
+the \texttt{APromised} state while holding some proposal, \texttt{psal}.
+
+\begin{lstlisting}
+Definition r_prepare_req_cond (res : option proposal) := res == None.
+
+(* Invariant relates the argument and the shape of the state *)
+Definition r_prepare_req_inv (e : nat) (pinit: proposal): cont (option proposal) :=
+  fun res i =>
+    if res is Some psal
+    then loc i = st :-> (e, APromised psal)
+    else loc i = st :-> (e, AInit).
+
+(* Loops until it receives a prepare req *)
+Program Definition receive_prepare_req_loop (e : nat):
+  DHT [a, W]
+  (fun i => loc i = st :-> (e, AInit),
+   fun res m => exists psal, (res = Some psal) /\
+       (loc m = st :-> (e, APromised psal)))
+  :=
+  Do _ (@while a W _ _ r_prepare_req_cond (r_prepare_req_inv e) _
+        (fun _ => Do _ (
+           r <-- tryrecv_prepare_req;
+           match r with
+           | Some (from, tg, body) => ret _ _ (Some body)
+           | None => ret _ _ None
+           end
+        )) None).
+...
+Next Obligation.
+  move => i1/= E1.
+  apply: (gh_ex (g:=([::0; 0]))).
+  apply: call_rule => //r i2 [H1]H2 C2.
+  rewrite /r_prepare_req_cond/r_prepare_req_inv in H1 H2.
+    by case: r H1 H2 => //p _; exists p.
+Qed.
+\end{lstlisting}
+
+The simple obligation we have shown in the code listing is to show that
+given the pre condition holds, show that the execution of the loop will take
+us to the post condition.
+In order to prove it, we take an example of a prepare request with the proposal
+$\langle 0, 0 \rangle$, i.e. we supply a value for the \texttt{psal} in
+the post condition, and execute the statements in the loop.
+We then use the definition of our loop invariant
+\texttt{r\_prepare\_req\_inv} which states that as long as the incoming prepare
+request is valid proposal, you will accept it and move to the \texttt{APromised}
+state. Thus, trivially completing our proof.
 
 \section{Extraction}
 Disel programs can be extracted into their corresponding OCaml definitions.
@@ -182,7 +238,7 @@ can `announce' when the system has achieved consensus. An example wrapper which
 uses the extracted code is implemented in the \texttt{paxos.py} file. The code
 listing below shows the output of running this wrapper. The output shows
 the values accepted by each acceptor and using this information, the wrapper
-announce that consensus has been acheived on value $2$ as a majority of
+announce that consensus has been achieved on value $2$ as a majority of
 acceptors have accepted it.
 
 \begin{lstlisting}
