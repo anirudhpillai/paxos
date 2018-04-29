@@ -252,6 +252,28 @@
 	\cfoot{\thepage}
 }
 
+% \newcommand{\abstractpage}{
+% 	\newpage
+% 	\pagenumbering{gobble}
+% 	\setcounter{page}{3}
+% 	\pagestyle{fancy}
+% 	% \lhead{Thesis advisor: \@advisor} \rhead{\@author}
+%   \lhead{30th April 2018} \rhead{Thesis advisor: \@advisor}
+% 	\renewcommand{\headrulewidth}{0.0pt}
+% 	\vspace*{35pt}
+% 	\begin{center}
+% 	\Large \textcolor{SchoolColor}{Mechanised Verification of Paxos-like Consensus Protocols} \normalsize \\
+%   \vspace*{20pt}
+%   \large \@author \normalsize \\
+% 	\vspace*{40pt}
+% 	\scshape Abstract \\ \rm
+% 	\end{center}
+% 	\input{frontmatter/abstract}
+% 	\vspace*{\fill}
+% 	\newpage \lhead{} \rhead{}
+% 	\cfoot{\thepage}
+% }
+
 \newcommand{\dedicationpage}{
 	\newpage \thispagestyle{fancy} \vspace*{\fill}
 	\scshape \noindent \input{frontmatter/dedication}

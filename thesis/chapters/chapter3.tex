@@ -29,7 +29,6 @@ client application complies with the encoded protocol.
 % interest wrt. to the system in question (Paxos) that you'd like to prove via encoding it in
 % Disel.
 
-
 \section{Requirements}
 \begin{enumerate}
   \item Adapt Paxos for encoding in Disel and devise the state-transition system for this protocol.
@@ -41,18 +40,17 @@ client application complies with the encoded protocol.
   \item Mechanise a client application of the protocol verified out of the abstract interface.
 \end{enumerate}
 
-\vspace{-5mm}
-\section{Analysis: Approach to Mechanising Proofs in Disel}
-Having decided on the requirements we came up with a workflow to
-mechanise the proof in Disel. Finishing all the stages in the workflow
-will help us to meet all our requirements.
-
-\begin{figure}
+\begin{figure}[h]
 \centering
 \includegraphics[width=\textwidth]{figures/disel_workflow.png}
 \caption{Disel Workflow
 \label{fig:myInlineFigure}}
 \end{figure}
+
+\section{Analysis: Approach to Mechanising Proofs in Disel}
+Having decided on the requirements we came up with a workflow to
+mechanise the proof in Disel. Finishing all the stages in the workflow
+will help us to meet all our requirements.
 
 % (1) Write code before proofs and run/test it;
 %         (2) Prove that the code follows the protocol;

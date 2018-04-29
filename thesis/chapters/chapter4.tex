@@ -59,7 +59,7 @@ Optimisations are aspects of the protocol that improve its running time or
 resource consumption by improving upon the `mundane' way of doing the same
 thing. Removing optimisations allowed us to simplify our proofs in Disel.
 
-Firstly, we decided that if a proposer fails while trying to achieve
+Therefore, we decided that if a proposer fails while trying to achieve
 consensus with a proposal number (i.e. it receives a nack), then it does not later try
 to propose again with a higher proposal number. Removing this optimisation meant we did not
 have to deal with the state of a proposer where it changes the proposal number it

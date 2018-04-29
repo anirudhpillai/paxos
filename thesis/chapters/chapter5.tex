@@ -86,7 +86,7 @@ never be accepted by any acceptor as its proposal number is not greater than $0$
 We still need to send these accept requests as both branches of a \texttt{if}
 statement need to have the same type. The distributed Hoare types and the pre and post conditions
 defined are also show in the code listing. The proposer starts off in the \texttt{PInit}
-state and on finishing the round, ends up in the \texttt{PAbort}.
+state and on finishing the round, ends up in the \texttt{PAbort} state.
 
 \section{Verfying the Client}
 We will now briefly look at how the proofs were encoded.
@@ -97,7 +97,7 @@ arrives correctly.
 
 The pre and post conditions state that before executing this loop, the acceptor
 starts in the \texttt{AInit} state and after the execution, it finishes in
-the \texttt{APromised} state while holding some proposal, \texttt{psal}.
+the \texttt{APromised} state while holding some proposal \texttt{psal}.
 
 \begin{lstlisting}
 Definition r_prepare_req_cond (res : option proposal) := res == None.
@@ -224,7 +224,7 @@ to find out when the entire system has achieved consensus, i.e. a majority of
 acceptors have accepted the same proposal.
 
 One way of making the client do this would be to go back to the Disel code and
-write the implementation of a learner and define an $accepted$ message that will
+write the implementation of a learner and define an \textsf{accepted request} message that will
 be sent from an acceptor to a learner whenever it accepts a proposal. This learner
 can then tell us when the entire system has achieved consensus. This method is
 time consuming because one will have to do all the encoding similar to that for
