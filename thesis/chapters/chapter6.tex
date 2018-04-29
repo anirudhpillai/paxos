@@ -14,12 +14,12 @@
 
 \section{Summary of Achievements}
 The project achieved all its goals apart from proving the inductive invariant.
-Having followed the Disel workflow we can match the deliverables to the
-stages in the workflow. We delivered a partial mechanised proof of Paxos in Disel
+We delivered a partial mechanised proof of Paxos in Disel
 which included a client application that was shown to adhere to the encoded
 protocol. However, the complete correctness of the protocol itself is missing
 because we ran out of time to fully mechanise the proof of the inductive
-invariant that verifies the protocol.
+invariant that verifies the protocol. Having followed the Disel workflow we can
+match the deliverables to the stages in the workflow.
 
 \begin{enumerate}
   \item \textbf{The Adapted Protocol} \\
@@ -92,11 +92,12 @@ got to the goal.
     the node from which the prepare request was received is a proposer.
   \item \texttt{receive\_acc\_req\_loop} \\
     Handles an incoming accept request and updates the current state accordingly \\
-    4 of 4 obligations fully proven to show that loop invariant holds, and that
-    given the pre condition, we reach the post condition after execution of the loop.
+    4 of 4 obligations fully proven to show that loop invariant, the pre and post
+    conditions hold.
   \item \texttt{acceptor\_round} \\
     Combines all the loops to give the implementation of an acceptor. \\
-    1 of 1 obligation remaining to be proved. The difficulty is in proving
+    1 of 1 obligation remaining to be proved that involves proving the pre and post
+    condition hold. The difficulty is in proving
     the post condition which states that an acceptor can be in either \texttt{AInit},
     \texttt{APromised} or \texttt{AAccepted} after the round is finished.
 \end{enumerate}
@@ -116,15 +117,22 @@ got to the goal.
     prepare request is a proposer.
   \item \texttt{receive\_prepare\_resp\_loop} \\
     Handles the incoming promises or nacks and updates the state accordingly. \\
-    1 of 4 obligations remaining. Need to show that the invariant of the loop holds
+    1 of 4 obligations remaining.
+    The proved obligations show how to reach the post
+    condition from the pre condition.
+    The remaining obligation deals with showing that both the pre and post conditions
+    hold. The difficulty with the remaining obligation is
+    to show that the invariant of the loop holds
     irrespective of whether a promise or a nack was received.
   \item \texttt{send\_accept\_req\_loop} \\
     Sends an accept request to the entire set of acceptors. \\
-    1 of 1 obligation remaining to be proved. The problem is showing that
+    1 of 1 obligation remaining to be proved that deals with proving that the
+    pre and post conditions hold. The problem in this is showing that
     the node sending the prepare requests is a proposer.
   \item \texttt{proposer\_round} \\
     Combines all the loops to give the implementation of a proposer. \\
-    1 of 1 obligation remaining to be proved. The difficulty was in showing how
+    1 of 1 obligation remaining to be proved that involves showing the pre and post
+    conditions hold. The difficulty was in showing how
     the proposer reaches the \texttt{PAbort} state after finishing execution.
 \end{enumerate}
 
@@ -179,9 +187,10 @@ and design of the protocol, helped solidify the design and also make it
 minimal by removing unnecessary state transitions.
 
 %% Percentage Completion
-Thus, having looked at everything we can say we completed about 65\% of
-the mechanised of Paxos in Disel. This is because the invariant is a major chunk of
-the proof and there are also a few proofs that still need to be completed.
+Thus, having looked at everything we can say we completed about 75\% of
+the mechanisation of Paxos in Disel. This is because the invariant is a major chunk of
+the proof and there are also a few obligations, as pointed out in section 6.2.1
+that still need to be completed.
 
 \section{Summary of Experience with Mechanised Verification in Disel}
 Disel was the critical component of this project and for most purposes, it
@@ -217,18 +226,20 @@ The reason for this was because we when an acceptor receives an \texttt{accept\_
 we checked if the incoming proposal had a proposal number greater than the one
 currently held by the proposal, and only then move to the AAccepted state. The fact
 that we were reading the state of the acceptor after receiving the incoming message
-meant that by then the acceptor had already transition its state accordingly
-when it received it and so the proposal number held by it was always
-equal to the incoming messages proposal. This meant that the acceptor would not
+meant that, by then the acceptor had already changed its state accordingly
+when it received the message, and so the proposal number held by it was always
+equal to the incoming message's proposal. This meant that the acceptor would not
 send a promise response.
 
 There were also instances where doing the proofs required the pre
 or post conditions of the transition to
 be strengthened by case analysing on the the message being sent or received.
-One example, in the post condition of \texttt{resp\_to\_prepare\_req}, is as follows. Initially,
+One example, in the post condition of \texttt{resp\_to\_prepare\_req}, is as
+follows. Initially,
 the post condition stated that after responding to a \texttt{prepare\_req},
-the acceptor would either go the \texttt{APromised} state either holding the
+the acceptor would go to the \texttt{APromised} state either holding the
 proposal it already had or the new proposal it received. The strengthened
+post condition
 looks at the received message and checks if the incoming proposal has proposal
 number greater that the one it has already promised, only then does it transition
 to the \texttt{APromised} state holding the new incoming proposal.
@@ -252,16 +263,6 @@ needs to prove every single transition. Furthermore, when the inductive
 invariant is added, all the transitions need to be show to adhere to it,
 thus, requiring more time to implement the proofs.
 
-People have attempted to create software for verifying the correctness of distributed
-systems. IronFleet \cite{15}, developed at Microsoft Research, can prove not just
-safety but also liveness properties of distributed systems and has been used
-to verify a `complex implementation of a Paxos-based replicated state machine
-library'. Verdi \cite{16} is another framework built on top of Coq and has been used
-to develop the `proof of linearisability of the Raft state machine replication
-algorithm'. Ivy \cite{19} is another tool which makes it much easier to find and
-prove inductive invariants for the system. Other similar tools are PSync \cite{17}
-and EventML \cite{18}.
-
 Furthermore, the current alternatives to Disel, as pointed out in
 \hyperref[sec:relatedWork]{Section 2.4}, do not allow for proving invariants
 separately from verifying the code for compliance with a protocol. Using
@@ -271,15 +272,15 @@ inductive invariant.
 
 
 \section{Future Work}
-First steps would definitely be to finish mechanising the left out things
-pointed in the previous section. This will help us reach the final stage in the Disel
+First steps would definitely be to finish mechanising the remaining things
+pointed out in section 6.2. This will help us reach the final stage in the Disel
 workflow. After that, it would be possible to try proving the optimisations
 in Paxos based on the proof of the `core' protocol. It would also then be possible
 to use `Hooks' \cite{9} in Disel to compose the proof with proofs of other
 verified components.
 
 There are also a few areas for future work in Disel.
-Finding the inductive invariant for the protocol is much harder task than
+Finding the inductive invariant for the protocol is a much harder task than
 designing the state transition system. The Disel paper \cite{9} mentioned the prospect
 of combining Disel with Ivy \cite{19}, which would offer assistance in finding
 the inductive invariant. Another thing, also mentioned in the Disel paper, is

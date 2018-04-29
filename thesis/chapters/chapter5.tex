@@ -1,13 +1,14 @@
 \chapter{Client Application}
-As outlined in chapter 2, our approach to using Disel involved first coding
-the protocol and the client application, and then going on write the proofs.
+As outlined in section 3.3, our approach to using Disel involved first encoding
+the client application and the protocol, and then going on to write the proofs
+to show that the client follows the protocol.
 Implementing the client was important for a couple of reasons.
 Firstly, it ensures that our adapted protocol is adequate for
 implementing client applications. Having the client application working before
 writing the proofs showed
 that the design of the adapted protocol worked and could be used
 to achieve consensus. Secondly, the client application also helped us test
-our encoding of the adapted protocol. As we did encode the inductive invariant,
+our encoding of the adapted protocol. As we did not encode the inductive invariant,
 the working of the client application helped us test the properties of the
 adapted protocol, i.e. observing nodes achieve consensus using the protocol.
 
@@ -16,7 +17,7 @@ that uses the proof of the adapted protocol to create an application where
 a set of nodes achieve consensus on a value. The chapter first looks at how the client
 application was designed and encoded in Disel. After which we look into how
 Disel's \texttt{shims} runtime was used to extract the OCaml code for the
-runnable client application. Then we outline how to extended the client
+runnable client application. Then we outline how we extended the client
 application by writing a wrapper around it. Finally, we look at how the client
 application was proved in Disel.
 
@@ -27,7 +28,7 @@ application was proved in Disel.
 The main property that we want to observe from the client is the acceptors achieving
 consensus on a proposal. This meant we needed to be able to see that a majority of
 acceptors accepting a protocol and that all of the acceptors in the majority
-accept the same protocol.
+accept the same proposal.
 
 Furthermore, we needed the client application to follow the same state transition
 system we designed for our adapted protocol. Thus, the correct functioning of the
@@ -41,7 +42,7 @@ acceptors and then see the acceptors achieve consensus. Each proposal that is in
 will only try once to achieve consensus using the proposal number that it is initialised
 with. If it receives a nack in the process, then it stops and does not retry to
 achieve consensus with a higher proposal number. As explained in the previous
-chapter, we choose this `one shot' process for the proposer in order to focus on
+chapter, we choose this `one shot' process for the proposer in order to focus
 just on the part of the protocol where consensus is achieved, i.e. where the proposer
 accumulates enough promises and then sends out an accept request which then may
 be accepted by each of the acceptors.
@@ -81,7 +82,7 @@ Program Definition proposer_round (psal: proposal):
 
 Although, if a nack was received, the proposal still sends
 accept requests with the proposal $\langle 0, 0 \rangle$. This proposal will
-never be accepted by any acceptor as its proposal number is not greater than 0.
+never be accepted by any acceptor as its proposal number is not greater than $0$.
 We still need to send these accept requests as both branches of a \texttt{if}
 statement need to have the same type. The distributed Hoare types and the pre and post conditions
 defined are also show in the code listing. The proposer starts off in the \texttt{PInit}
@@ -141,18 +142,18 @@ $\langle 0, 0 \rangle$, i.e. we supply a value for the \texttt{psal} in
 the post condition, and execute the statements in the loop.
 We then use the definition of our loop invariant
 \texttt{r\_prepare\_req\_inv} which states that as long as the incoming prepare
-request is valid proposal, you will accept it and move to the \texttt{APromised}
+request is a valid proposal, you will accept it and move to the \texttt{APromised}
 state. Thus, trivially completing our proof.
 
 \section{Extraction}
 Disel programs can be extracted into their corresponding OCaml definitions.
-The extracted code contains modules to that define the various node states
+The extracted code contains modules that define the various node states
 and transitions. This extracted code can then be used by a shim to create a
 client application.
 
 In order for the extraction to work, a runnable program needs to be supplied for each of
 the nodes participating in the protocol. Additionally, each node needs to
-be given an initial state that satisfied all the imposed invariants.
+be given an initial state that satisfies all the imposed invariants.
 
 The \texttt{SimplePaxosApp.v} file uses the runnable implementations of
 the proposer and acceptor and defines the code to instantiate the nodes.
@@ -201,7 +202,7 @@ sending msg in protocol 0 with tag = 3, contents = [2; 2] to 5
 \end{lstlisting}
 
 The tags identify the messages types. The mapping for the tags is defined in
-our protocol \texttt{PaxosProtocol.v} as follows.
+our protocol file (\texttt{PaxosProtocol.v}) as follows.
 
 \begin{lstlisting}
 Definition prepare_req : nat := 0.
@@ -234,8 +235,8 @@ A quicker way to implement the same functionality is to write a
 wrapper around the extracted code that enables communication with the
 acceptor. The wrapper can keep checking when each of the acceptors has accepted
 a proposal and can compare the values in those proposals. Using this the wrapper
-can `announce' when the system has achieved consensus. An example wrapper which
-uses the extracted code is implemented in the \texttt{paxos.py} file. The code
+can `announce' when the system has achieved consensus. An example of a wrapper, which
+uses the extracted code, is implemented in the \texttt{paxos.py} file. The code
 listing below shows the output of running this wrapper. The output shows
 the values accepted by each acceptor and using this information, the wrapper
 announce that consensus has been achieved on value $2$ as a majority of

@@ -43,12 +43,12 @@ accepted a proposal and what proposal each of them has accepted. Thus, we can kn
 from the inductive invariant when consensus has been achieved by checking the values
 of each of the accepted proposals.
 
-Getting read of the learning phase also meant that we did not have to implement
+Getting rid of the learning phase also meant that we did not have to implement
 a learner.
 % in our protocol as the role of the learner (detecting that consensus
 % has been achieved) is performed by the inductive invariant.
 The learner is useful in the actual Paxos implementations as
-it can detect when consensus is achieved and can then inform the client, its
+it can detect when consensus is achieved and can then inform the client, yet, its
 presence does not change how consensus is achieved. Removing the learner simplified
 our state transition diagram for the protocol as we did not have to account
 for the states of the learner and also the $Phase 2b$ transition of the
@@ -59,8 +59,8 @@ Optimisations are aspects of the protocol that improve its running time or
 resource consumption by improving upon the `mundane' way of doing the same
 thing. Removing optimisations allowed us to simplify our proofs in Disel.
 
-Firstly, we decided that a proposer, if it fails while trying to achieve
-consensus with a proposal number (i.e. it receives a nack), does not later try
+Firstly, we decided that if a proposer fails while trying to achieve
+consensus with a proposal number (i.e. it receives a nack), then it does not later try
 to propose again with a higher proposal number. Removing this optimisation meant we did not
 have to deal with the state of a proposer where it changes the proposal number it
 was initialised with. Removing this optimisation only
@@ -70,15 +70,15 @@ consensus with the proposal number that it is currently using. Thus, in order
 for consensus to be achieved, a proposer which is initialised with a higher
 proposal number will have to successfully get promises from a quorum of acceptors.
 
-Additionally we removed the minor optimisation of choosing a majority for
-sending requests from the proposer. The proposer instead of choosing a
-quorum of acceptors for sending a message, chooses the entire set of acceptors.
-This does not alter the protocol as the entire set of acceptors is a valid
-quorum of acceptors.
+% Additionally we removed the minor optimisation of choosing a majority for
+% sending requests from the proposer. The proposer instead of choosing a
+% quorum of acceptors for sending a message, chooses the entire set of acceptors.
+% This does not alter the protocol as the entire set of acceptors is a valid
+% quorum of acceptors.
 
-This adapated and simplified protocol allows us to focus on verifying the core
+This adapted and simplified protocol allows us to focus on verifying the core
 logic (the part dealing with achieving consensus) of Paxos. The
-optimisations and `conveniece' that we removed can be verified separately after
+optimisations and `convenience' that we removed can be verified separately after
 the core logic has been verified.
 
 
@@ -150,7 +150,7 @@ until one of the following two things happen:
 \begin{enumerate}
   \item It receives a nack response from the acceptor. This indicates that the
     acceptor might already have promised a proposal
-    with a proposal number greater than $p$. This leads to the proposer to
+    with a proposal number greater than $p$. This makes the proposer
     transition into the \texttt{PAbort} state. In this state the proposer basically
     gives up trying to achieve consensus using the proposal number $p$ that it was
     initialised with and completely stops sending and receiving messages. Hence,
@@ -187,7 +187,7 @@ in this state as it is not sending any messages. It keeps listening for messages
 and on receiving a prepare request message, it transitions to \texttt{APromised}
 state.
 
-In the \texttt{APromised} state, the acceptor holds a \texttt{proposal}. This is
+In the \texttt{APromised} state, the acceptor holds a proposal. This is
 the highest numbered proposal that it has received so far in a prepare request
 message. In this state, on receiving a prepare request, if the proposal number
 of the proposal in the prepare request is greater than the proposal number of
@@ -306,11 +306,11 @@ to messages. This is similar to the \texttt{PAbort} state for the proposer.
 % Thus, meeting our above requirement.
 
 \subsection{Simulator}
-%% Talk about how it modeled how Disel works
+%% Talk about how it modelled how Disel works
 %% and how it followed our adapted protocol
 The next step after designing the adapted protocol was to
 implemented a simulator for it in Python. The simulator was modelled according
-to Disel, in that each process has send and receive transitions and that each
+to Disel in that, each process has send and receive transitions and that each
 node follows a state transition system. In order to test the protocol, we only
 used the state transitions we designed in the adapted protocol. The type
 of messages that each node sends or receives and the data it holds
@@ -321,12 +321,12 @@ runs in the simulator. It first checks the type of message and then performs
 an action depending on its current state. For example, when it receives a
 \texttt{AcceptRequestMessage}, if it is in the \texttt{AInit} state then it
 accepts the proposal, otherwise if it is in the \texttt{APromised} state, it
-first the proposal number of the incoming message (proposal)
+first checks the proposal number of the incoming message (proposal)
 and accepts the proposal only if the number is greater than the number
 the acceptor has promised already.
 
 \begin{lstlisting}[language=Python]
-class acceptor(Process):
+class Acceptor(Process):
     ...
     def body(self):
         while True:
